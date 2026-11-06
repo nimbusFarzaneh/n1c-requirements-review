@@ -174,6 +174,8 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 .login-foot{margin:20px 0 0;font-size:12px;color:var(--muted);line-height:1.5}
 .loading{padding:48px;text-align:center;color:var(--muted)}
 .coltabs{display:none}
+.search{font-size:13px;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;width:220px;margin-left:auto}
+.intro b{font-weight:500;color:var(--ink)}
 .fsel{display:none}
 .intro .mb{display:none}
 @media (max-width:640px){
@@ -186,10 +188,11 @@ h1{font-size:20px}
 .progcard{flex:1 1 100%}
 .who{flex:1 1 100%;order:-1;margin:0}
 .pills{justify-content:flex-start}
-.toolbar{flex-wrap:nowrap}
 #filters{display:none}
 .toolbar .lbl{font-size:14px;margin-right:0}
 .toast{left:14px;right:14px;transform:none;max-width:none;bottom:16px}
+.toolbar{flex-wrap:wrap}
+.search{width:100%;margin-left:0;min-height:44px;font-size:15px;border-radius:10px;order:3}
 .fsel{display:block;flex:1;max-width:none;font-size:15px;min-height:44px;border-radius:10px;padding:0 12px}
 .coltabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
 .coltab{font-size:12px;line-height:1.25;min-height:52px;padding:4px;border-radius:8px;border:1px solid var(--line);border-top:3px solid var(--c);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
@@ -234,7 +237,7 @@ h1{font-size:20px}
 <header class="top">
 <div class="top-l">
 <h1>Do you agree with where each requirement sits?</h1>
-<p class="intro">Approve a card if it's in the right place and it moves to the approved pile. If you disagree, <span class="dt">drag it to another column (or use "Move to")</span><span class="mb">use "Move to"</span> and tell us why. You can comment on any card. Items needing an N1C decision are settled together, so just add your view. Your changes save automatically.</p>
+<p class="intro"><b>Agree</b> if a requirement is right and in the right column. If it belongs elsewhere, <span class="dt">drag it to another column (or use "Move to")</span><span class="mb">use "Move to"</span> and say why. If you can't judge it as written, choose <b>Unclear?</b> For items needing an N1C decision, pick the column you'd choose. Only agreeing, moving or picking a view counts as reviewed; comments and questions don't. Changes save automatically.</p>
 </div>
 <div class="progcard">
 <div class="prog-row"><span>Your progress</span><b id="progText">0 of 0</b></div>
@@ -247,6 +250,7 @@ h1{font-size:20px}
 <span class="lbl">Show</span>
 <span id="filters" class="toolbar"></span>
 <select class="sel fsel" id="filterSel" aria-label="Show"></select>
+<input type="search" class="search" id="searchBox" placeholder="Search ID or wording" aria-label="Search requirements by ID or wording">
 
 </div>
 
@@ -271,7 +275,7 @@ h1{font-size:20px}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=30"></script>
-<script src="app.js?v=30"></script>
+<script src="config.js?v=32"></script>
+<script src="app.js?v=32"></script>
 </body>
 </html>

@@ -9,8 +9,12 @@ A review board where reviewers approve, move or comment on N1C requirements prop
 ## How reviewers use it
 
 1. Open the link and enter their personal access code.
-2. For each card: **Approve** it (it moves to the approved pile), **Comment** on it, or move it to another column (drag it, or use **Move to…**). Moving requires a reason.
-3. On **Needs N1C Decision** cards, pick a view (MVP, Later or Out of Scope) and add a note. These are the only cards where reviewers see each other's input, to prepare for the discussion.
+2. For each card, take a position:
+   - **Agree**: the requirement is right and belongs in its column. It moves to the agreed pile.
+   - **Move** it to another column (drag it, or use **Move to…**), with a reason. Moving it to **Needs N1C Decision** means "this should be decided by N1C".
+   - **Unclear?**: they can't judge it as written. They say what's unclear; the card stays unreviewed.
+   - **Comment** on it at any time. A comment alone doesn't count as reviewed.
+3. On **Needs N1C Decision** cards, pick the column they'd choose (MVP, Later or Out of Scope) and optionally add a note. Only a chosen column counts as reviewed. These are the only cards where reviewers see each other's input, to prepare for the discussion.
 4. Use **Suggest a missing requirement** for anything that isn't on the board.
 
 Everything saves automatically. Reviewers can stop and come back later; their progress is kept.
@@ -38,7 +42,9 @@ One row per requirement:
 | Reason | One line on why it's in that category. Shown on the card. |
 | Also involves | Optional. Other stakeholders needed, mainly for N1C items. |
 | Open question | Optional. The question to settle, mainly for N1C items. |
-| Decision | Leave empty. Fill in after the discussion for N1C items, e.g. `MVP`. The card then moves to the "decided" pile. |
+| Decision | Leave empty. After a decision (usually for N1C items), enter the final column, e.g. `Later`. The card is then locked and shows in the "decided" pile. **Don't change Category**: it records what was originally proposed. |
+| Decision date | Optional. When it was decided, e.g. `2026-11-13`. |
+| Decision rationale | Optional. A line on why, shown to reviewers with the decision. |
 
 ### 3. Fill in the Reviewers tab
 
@@ -77,10 +83,10 @@ Add yourself as a reviewer with a test code, sign in, approve a card, move one, 
 
 - **Freeze the requirements** once reviewers start. Editing wording is fine, but avoid changing IDs or adding or removing rows.
 - **Sign-ins:** the **Log** tab records each time someone signs in or reopens the board (Status `signed in`), and when they click **Sign out** (`signed out`), so you can see who has started. Closing the tab without signing out isn't recorded.
-- **Summary:** choose **Review board → Refresh summary** in the sheet. It builds a **Summary** tab with one row per requirement, each reviewer's position and comment, and an Agreement column (All approved, Disagreement, Incomplete, Views differ, and so on).
+- **Summary:** choose **Review board → Refresh summary** in the sheet. It builds a **Summary** tab with one row per requirement: how many reviewers have taken a position, an **Outcome** (All agree, All suggest *column*, Reviewers disagree, Incomplete, or Decided), how many asked for clarification, and each reviewer's position and comment. Comments and clarification requests don't count as positions.
 - **Suggestion comments:** reviewers can comment on any suggestion, and edit or withdraw their own until it has a decision. Comments are stored in a **Suggestion comments** tab (created automatically the first time someone comments); edits and withdrawals are recorded in the Log.
 - **Suggestions:** after the review, fill in **Decision** (e.g. `Added as MVP`, `Merged with FR-REC-03`, `Declined`) and optionally **Decision note** in the Suggestions tab. Until then the board shows "Not decided yet"; afterwards it shows your decision. (If your tab still has the older headers **Triage** / **Triage note**, rename them to **Decision** / **Decision note**; the old names also still work.)
-- **N1C decisions:** after the discussion, fill in **Decision** on each requirement. To actually move it into a column, change its **Category** too.
+- **N1C decisions:** after the discussion, fill in **Decision** (the final column), and optionally **Decision date** and **Decision rationale**, on each requirement. Leave **Category** as it was, so the original proposal stays on record. (The Decision date and Decision rationale columns are added to the tab automatically if they're missing.)
 
 ## Files
 

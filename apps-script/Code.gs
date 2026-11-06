@@ -15,14 +15,17 @@
  */
 
 var TABS = {
-  Requirements: ['ID', 'Requirement', 'Workflow', 'Actor', 'Category', 'Reason', 'Also involves', 'Open question', 'Decision'],
+  Requirements: ['ID', 'Requirement', 'Workflow', 'Actor', 'Category', 'Reason', 'Also involves', 'Open question', 'Decision', 'Decision date', 'Decision rationale'],
   Reviewers: ['Name', 'Code', 'Active', 'Role'],
   Reviews: ['Reviewer', 'ID', 'Status', 'Suggested category', 'Comment', 'Updated'],
   Log: ['Timestamp', 'Reviewer', 'ID', 'Status', 'Suggested category', 'Comment'],
-  Suggestions: ['Timestamp', 'Reviewer', 'Requirement', 'Workflow', 'Actor', 'Suggested category', 'Why', 'Decision', 'Decision note'],
+  Suggestions: ['Timestamp', 'Reviewer', 'Requirement', 'Workflow', 'Actor', 'Suggested category', 'Why', 'Decision', 'Decision note', 'ID'],
   'Suggestion comments': ['Timestamp', 'Suggestion', 'Reviewer', 'Comment']
 };
-var STATUSES = ['approved', 'moved', 'commented', 'view', 'cleared'];
+// agreed = agrees with the placement; clarify = can't judge it as written; approved = older name for agreed.
+var STATUSES = ['agreed', 'approved', 'moved', 'commented', 'clarify', 'view', 'cleared'];
+// Columns added after the first version: created automatically at the end of the tab if missing.
+var ADDED_COLUMNS = { Requirements: ['Decision date', 'Decision rationale'], Reviewers: ['Role'], Suggestions: ['ID'] };
 var CATEGORIES = ['MVP', 'Later', 'Out of Scope', 'Needs N1C Decision'];
 
 // ---------- menu and setup ----------
@@ -100,12 +103,19 @@ function table(name) {
     sh.setFrozenRows(1);
   }
   if (!sh) throw new Error('Missing tab: ' + name + '. Run Review board > Set up tabs.');
+  if (ADDED_COLUMNS[name]) {
+    var head0 = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0].map(function (h) { return String(h).trim(); });
+    var missing = ADDED_COLUMNS[name].filter(function (h) { return head0.indexOf(h) < 0; });
+    if (missing.length) sh.getRange(1, head0.length + 1, 1, missing.length).setValues([missing]).setFontWeight('bold');
+  }
   var values = sh.getDataRange().getValues();
   var head = (values.shift() || []).map(function (h) { return String(h).trim(); });
   return {
     sheet: sh, head: head, rows: values,
     col: function (n) { return head.indexOf(n); },
-    get: function (row, n) { var i = head.indexOf(n); return i < 0 ? '' : row[i]; }
+    get: function (row, n) { var i = head.indexOf(n); return i < 0 ? '' : row[i]; },
+    // Appends a row given as { header: value }, so column order in the sheet doesn't matter.
+    append: function (obj) { sh.appendRow(head.map(function (h) { return h in obj ? obj[h] : ''; })); }
   };
 }
 
@@ -163,7 +173,8 @@ function loadState(reviewer, isOwner) {
     return {
       id: text(R.get(r, 'ID')), requirement: text(R.get(r, 'Requirement')), workflow: text(R.get(r, 'Workflow')),
       actor: text(R.get(r, 'Actor')), category: text(R.get(r, 'Category')), reason: text(R.get(r, 'Reason')),
-      involves: text(R.get(r, 'Also involves')), question: text(R.get(r, 'Open question')), decision: text(R.get(r, 'Decision'))
+      involves: text(R.get(r, 'Also involves')), question: text(R.get(r, 'Open question')), decision: text(R.get(r, 'Decision')),
+      decisionDate: text(R.get(r, 'Decision date')), decisionRationale: text(R.get(r, 'Decision rationale'))
     };
   });
 
@@ -179,12 +190,12 @@ function loadState(reviewer, isOwner) {
 
   var C = table('Suggestion comments'), comments = {};
   C.rows.forEach(function (r) {
-    var k = text(C.get(r, 'Suggestion')); if (!k || !text(C.get(r, 'Comment'))) return;
+    var k = text(C.get(r, 'Suggestion')).replace(/^'/, ''); if (!k || !text(C.get(r, 'Comment'))) return;
     (comments[k] = comments[k] || []).push({ reviewer: text(C.get(r, 'Reviewer')), comment: text(C.get(r, 'Comment')) });
   });
   var G = table('Suggestions');
   var suggestions = G.rows.filter(function (r) { return text(G.get(r, 'Requirement')); }).map(function (r) {
-    var key = suggestionKey(G.get(r, 'Timestamp'));
+    var key = suggestionId(G, r);
     return {
       key: key, comments: comments[key] || [],
       reviewer: text(G.get(r, 'Reviewer')), requirement: text(G.get(r, 'Requirement')), workflow: text(G.get(r, 'Workflow')),
@@ -241,14 +252,23 @@ function saveSuggestion(reviewer, b) {
   var req = String(b.requirement || '').trim();
   if (!req) return { ok: false, error: 'missing_requirement' };
   var cat = CATEGORIES.indexOf(String(b.category || '')) >= 0 ? b.category : '';
-  var now = new Date();
-  table('Suggestions').sheet.appendRow([now, safe(reviewer), safe(req), safe(b.workflow), safe(b.actor), cat, safe(b.why), '', '']);
-  return { ok: true, key: suggestionKey(now) };
+  var id = Utilities.getUuid();
+  table('Suggestions').append({ 'Timestamp': new Date(), 'Reviewer': safe(reviewer), 'Requirement': safe(req), 'Workflow': safe(b.workflow),
+    'Actor': safe(b.actor), 'Suggested category': cat, 'Why': safe(b.why), 'ID': id });
+  return { ok: true, key: id };
 }
 
-/** A suggestion is identified by when it was made (to the second). */
-function suggestionKey(v) {
-  return v instanceof Date ? String(Math.round(v.getTime() / 1000)) : '';
+/** A suggestion's unique ID. Rows from before IDs existed fall back to their timestamp (to the second). */
+function suggestionId(G, row) {
+  var id = text(G.get(row, 'ID'));
+  if (id) return id;
+  var v = G.get(row, 'Timestamp');
+  return v && typeof v.getTime === 'function' ? String(Math.round(v.getTime() / 1000)) : '';
+}
+
+function findSuggestion(G, key) {
+  for (var i = 0; i < G.rows.length; i++) if (key && suggestionId(G, G.rows[i]) === key) return i;
+  return -1;
 }
 
 /** Lets a reviewer change or withdraw their own suggestion, until it has a decision. */
@@ -257,11 +277,8 @@ function editSuggestion(reviewer, b, withdraw) {
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
-    var G = table('Suggestions'), at = -1;
-    for (var i = 0; i < G.rows.length; i++) {
-      if (suggestionKey(G.get(G.rows[i], 'Timestamp')) === key && text(G.get(G.rows[i], 'Reviewer')) === reviewer) { at = i; break; }
-    }
-    if (at < 0) return { ok: false, error: 'not_found' };
+    var G = table('Suggestions'), at = findSuggestion(G, key);
+    if (at < 0 || text(G.get(G.rows[at], 'Reviewer')) !== reviewer) return { ok: false, error: 'not_found' };
     if (text(G.get(G.rows[at], 'Decision') || G.get(G.rows[at], 'Triage'))) return { ok: false, error: 'already_decided' };
     var log = table('Log').sheet;
     if (withdraw) {
@@ -284,7 +301,8 @@ function editSuggestion(reviewer, b, withdraw) {
 function commentSuggestion(reviewer, b) {
   var key = String(b.key || ''), comment = String(b.comment || '').trim();
   if (!key || !comment) return { ok: false, error: 'missing_comment' };
-  table('Suggestion comments').sheet.appendRow([new Date(), "'" + key, safe(reviewer), safe(comment)]);
+  if (findSuggestion(table('Suggestions'), key) < 0) return { ok: false, error: 'not_found' };
+  table('Suggestion comments').sheet.appendRow([new Date(), /^\d+$/.test(key) ? "'" + key : key, safe(reviewer), safe(comment)]);
   return { ok: true };
 }
 
@@ -302,31 +320,36 @@ function refreshSummary() {
     };
   });
 
-  var head = ['ID', 'Requirement', 'Workflow', 'Proposed', 'Decision', 'Agreement'];
+  var head = ['ID', 'Requirement', 'Workflow', 'Proposed', 'Decision', 'Reviewed', 'Outcome', 'Questions'];
   reviewers.forEach(function (n) { head.push(n, n + ' comment'); });
   var out = [head];
 
   R.rows.forEach(function (r) {
     var id = text(R.get(r, 'ID')); if (!id) return;
-    var cat = text(R.get(r, 'Category'));
-    var cells = [], moved = 0, approved = 0, reviewed = 0, views = {};
+    var cat = text(R.get(r, 'Category')), isN = cat === 'Needs N1C Decision', decision = text(R.get(r, 'Decision'));
+    var cells = [], positions = [], questions = 0;
     reviewers.forEach(function (n) {
       var e = byKey[n + '|' + id];
       if (!e) { cells.push('Not reviewed', ''); return; }
-      reviewed++;
-      if (e.status === 'approved') approved++;
-      if (e.status === 'moved') moved++;
-      if (e.status === 'view' && e.to) views[e.to] = 1;
-      var label = { approved: 'Approved', moved: 'Moved to ' + e.to, commented: 'Commented', view: 'View: ' + (e.to || 'none') }[e.status] || e.status;
+      var st = e.status === 'approved' ? 'agreed' : e.status;
+      // A position is where the reviewer thinks it belongs; comments and questions aren't positions.
+      if (st === 'agreed') positions.push(cat);
+      else if (st === 'moved' && e.to) positions.push(e.to);
+      else if (st === 'view' && e.to) positions.push(e.to);
+      if (st === 'clarify') questions++;
+      var label = { agreed: 'Agrees', moved: 'Moved to ' + e.to, commented: 'Comment only', clarify: 'Needs clarification', view: e.to ? 'View: ' + e.to : 'Note only' }[st] || st;
       cells.push(label, e.comment);
     });
-    var agreement;
-    if (cat === 'Needs N1C Decision') agreement = text(R.get(r, 'Decision')) ? 'Decided' : (Object.keys(views).length > 1 ? 'Views differ' : 'For discussion');
-    else if (moved) agreement = 'Disagreement';
-    else if (reviewed < reviewers.length) agreement = 'Incomplete';
-    else if (approved === reviewers.length) agreement = 'All approved';
-    else agreement = 'Reviewed, check comments';
-    out.push([id, text(R.get(r, 'Requirement')), text(R.get(r, 'Workflow')), cat, text(R.get(r, 'Decision')), agreement].concat(cells));
+    var distinct = positions.filter(function (p, i) { return positions.indexOf(p) === i; });
+    var outcome;
+    if (decision) outcome = 'Decided: ' + decision;
+    else if (positions.length < reviewers.length) outcome = 'Incomplete';
+    else if (distinct.length > 1) outcome = 'Reviewers disagree';
+    else if (isN) outcome = 'All favour ' + distinct[0];
+    else if (distinct[0] === cat) outcome = 'All agree';
+    else outcome = 'All suggest ' + distinct[0];
+    out.push([id, text(R.get(r, 'Requirement')), text(R.get(r, 'Workflow')), cat, decision,
+      positions.length + ' of ' + reviewers.length, outcome, questions || ''].concat(cells));
   });
 
   var sh = ss.getSheetByName('Summary') || ss.insertSheet('Summary');
@@ -335,10 +358,10 @@ function refreshSummary() {
   sh.getRange(1, 1, 1, head.length).setFontWeight('bold');
   sh.setFrozenRows(1);
   sh.setFrozenColumns(2);
-  var colours = { 'Disagreement': '#FCE8D6', 'Views differ': '#FCE8D6', 'All approved': '#E6F3EA', 'Incomplete': '#F1F0EC' };
   for (var i = 1; i < out.length; i++) {
-    var c = colours[out[i][5]];
-    if (c) sh.getRange(i + 1, 6).setBackground(c);
+    var o = String(out[i][6]);
+    var c = o === 'All agree' ? '#E6F3EA' : o === 'Reviewers disagree' ? '#FCE8D6' : o.indexOf('All suggest') === 0 ? '#E8EEFB' : o === 'Incomplete' ? '#F1F0EC' : '';
+    if (c) sh.getRange(i + 1, 7).setBackground(c);
   }
   sh.autoResizeColumns(1, 1);
   sh.setColumnWidth(2, 360);

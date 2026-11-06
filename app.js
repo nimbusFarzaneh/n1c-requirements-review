@@ -14,8 +14,8 @@
     { key: 'open', label: 'Everything open' },
     { key: 'todo', label: 'Not yet reviewed' },
     { key: 'moved', label: 'Moved by me' },
-    { key: 'commented', label: 'With my comments' },
-    { key: 'approved', label: 'Approved by me' }
+    { key: 'commented', label: 'With my comments or questions' },
+    { key: 'agreed', label: 'Agreed by me' }
   ];
   var GROUP_AT = 12;   // group a column by workflow once it has more open cards than this
   var GROUP_SHOW = 6;  // cards shown per group before "Show more"
@@ -25,7 +25,7 @@
     demo: !CFG.scriptUrl,
     code: null, reviewer: '', isOwner: false, reviewerCount: 3,
     reqs: [], mine: {}, views: {}, suggestions: [],
-    filter: 'open', workflow: '',
+    filter: 'open', workflow: '', q: '',
     pileOpen: {}, groupShow: {}, viewsOpen: {}, mobileCol: 'MVP'
   };
 
@@ -52,9 +52,16 @@
   function mine(r) { return S.mine[r.id] || null; }
   function status(r) { var m = mine(r); return m ? m.status : ''; }
   function eff(r) { var m = mine(r); return (m && m.status === 'moved' && m.to) ? m.to : r.category; }
-  function isDecided(r) { return r.category === N1C && String(r.decision || '').trim() !== ''; }
+  // A requirement is decided once the owner fills in its Decision in the sheet, whatever its column.
+  function isDecided(r) { return String(r.decision || '').trim() !== ''; }
   function reviewable(r) { return !isDecided(r); }
-  function isReviewed(r) { return !!status(r); }
+  // Only a real position counts as reviewed: agreeing, moving, or (for N1C items) choosing a view.
+  // Comments and clarification requests don't.
+  function isReviewed(r) {
+    var m = mine(r); if (!m) return false;
+    if (r.category === N1C) return m.status === 'view' && !!m.to;
+    return m.status === 'agreed' || m.status === 'moved';
+  }
 
   // ---------- API ----------
   function api(body) {
@@ -113,8 +120,8 @@
   function approve(id) {
     var r = byId(id); if (!r) return;
     var prev = copy(S.mine[id]);
-    setMine(id, { status: 'approved', to: '', comment: prev && prev.comment || '' });
-    toast('Approved ' + r.id.replace(/-/g, '\u2011') + '. It\u2019s now in the approved pile.', function () { setMine(id, prev); });
+    setMine(id, { status: 'agreed', to: '', comment: prev && prev.comment || '' });
+    toast('Agreed with ' + r.id.replace(/-/g, '\u2011') + ' in ' + r.category + '. It\u2019s now in the agreed pile.', function () { setMine(id, prev); });
   }
   function unapprove(id) {
     var m = S.mine[id];
@@ -130,6 +137,7 @@
     if (to === r.category) { undoMove(id); return; }
     openMove(id, to);
   }
+  function unclarify(id) { setMine(id, null); }
   function setView(id, cat) {
     var m = S.mine[id];
     setMine(id, { status: 'view', to: cat, comment: m && m.comment || '' });
@@ -148,11 +156,11 @@
   function renderFilters() {
     var pool = S.reqs.filter(reviewable);
     var counts = {
-      open: pool.filter(function (r) { return status(r) !== 'approved'; }).length,
-      todo: pool.filter(function (r) { return !status(r); }).length,
+      open: pool.filter(function (r) { return status(r) !== 'agreed'; }).length,
+      todo: pool.filter(function (r) { return !isReviewed(r); }).length,
       moved: pool.filter(function (r) { return status(r) === 'moved'; }).length,
       commented: pool.filter(function (r) { return mine(r) && mine(r).comment; }).length,
-      approved: pool.filter(function (r) { return status(r) === 'approved'; }).length
+      agreed: pool.filter(function (r) { return status(r) === 'agreed'; }).length
     };
     $('filters').innerHTML = FILTERS.map(function (f) {
       return '<button type="button" class="chip" data-act="filter" data-f="' + f.key + '" aria-pressed="' + (S.filter === f.key) + '">' + esc(f.label) + ' (' + counts[f.key] + ')</button>';
@@ -171,46 +179,52 @@
     renderFilters(); renderBoard();
   }
 
+  function matchesSearch(r) {
+    if (!S.q) return true;
+    var hay = (r.id + ' ' + r.requirement + ' ' + r.workflow + ' ' + r.actor + ' ' + r.reason).toLowerCase();
+    return S.q.split(/\s+/).every(function (w) { return hay.indexOf(w) >= 0; });
+  }
+
   function passFilter(r) {
-    if (S.workflow && (r.workflow || 'Other') !== S.workflow) return false;
+    if (!matchesSearch(r)) return false;
     var st = status(r), m = mine(r);
-    if (S.filter === 'todo') return !st;
+    if (S.filter === 'todo') return !isReviewed(r);
     if (S.filter === 'moved') return st === 'moved';
     if (S.filter === 'commented') return !!(m && m.comment);
-    if (S.filter === 'approved') return st === 'approved';
-    return st !== 'approved';
+    if (S.filter === 'agreed') return st === 'agreed';
+    return st !== 'agreed';
   }
 
   function shownIn(colKey) {
     var live = S.reqs.filter(function (r) { return eff(r) === colKey && reviewable(r); });
-    var pool = (S.filter === 'approved' || S.filter === 'commented') ? live : live.filter(function (r) { return status(r) !== 'approved'; });
+    var pool = (S.filter === 'agreed' || S.filter === 'commented') ? live : live.filter(function (r) { return status(r) !== 'agreed'; });
     return pool.filter(passFilter);
   }
 
   function renderBoard() {
-    var tabs = [], filtered = S.filter !== 'open';
+    var tabs = [], filtered = S.filter !== 'open' || !!S.q;
     var matches = {};
     COLS.forEach(function (c) { matches[c.key] = shownIn(c.key).length; });
     var html = COLS.map(function (col) {
       var all = S.reqs.filter(function (r) { return eff(r) === col.key; });
-      var decided = all.filter(isDecided);
+      var decided = col.key === N1C ? S.reqs.filter(isDecided) : [];
       var live = all.filter(reviewable);
-      var approved = live.filter(function (r) { return status(r) === 'approved'; });
-      var open = live.filter(function (r) { return status(r) !== 'approved'; });
-      var left = open.filter(function (r) { return !status(r); }).length;
+      var approved = live.filter(function (r) { return status(r) === 'agreed'; });
+      var open = live.filter(function (r) { return status(r) !== 'agreed'; });
+      var left = open.filter(function (r) { return !isReviewed(r); }).length;
       var shown = shownIn(col.key);
       var isN = col.key === N1C;
 
       tabs.push('<button type="button" class="coltab" role="tab" data-act="coltab" data-col="' + esc(col.key) + '" style="--c:' + col.color + '" aria-selected="' + (S.mobileCol === col.key) + '"><b>' + esc(col.key === N1C ? 'N1C decision' : col.key) + '</b><span>' + (filtered ? matches[col.key] + (matches[col.key] === 1 ? ' match' : ' matches') : isN ? open.length + ' open' : left + ' left') + '</span></button>');
       var h = '<section class="colm' + (S.mobileCol === col.key ? ' on' : '') + '" data-col="' + esc(col.key) + '" style="--c:' + col.color + '" aria-label="' + esc(col.key) + '">';
       h += '<div class="colm-h"><h2>' + esc(col.key) + '</h2><span>' +
-        (isN ? open.length + ' open · ' + all.length + ' total' : left + ' to review · ' + live.length + ' total') + '</span></div>';
+        (isN ? open.length + ' open · ' + decided.length + ' decided' : left + ' to review · ' + live.length + ' total') + '</span></div>';
       h += '<p class="blurb">' + esc(col.blurb) + '</p>';
       if (!isN) h += '<div class="dropzone">Drop here to move to ' + esc(col.key) + '</div>';
 
       if (!shown.length) {
         var elsewhere = COLS.filter(function (c) { return c.key !== col.key && matches[c.key]; }).map(function (c) { return c.key + ' (' + matches[c.key] + ')'; });
-        var msg = S.filter === 'approved' && isN ? 'These are settled by discussion, not approved.'
+        var msg = S.filter === 'agreed' && isN ? 'These are settled by discussion, so you give a view rather than agree.'
           : filtered ? 'None in this column.' + (elsewhere.length ? ' See ' + elsewhere.join(', ') + '.' : '')
           : open.length ? 'Nothing here.' : (approved.length ? 'All done here.' : 'No items.');
         h += '<p class="empty">' + esc(msg) + '</p>';
@@ -219,7 +233,7 @@
         shown.forEach(function (r) { var w = r.workflow || 'Other'; (groups[w] = groups[w] || []).push(r); });
         Object.keys(groups).sort().forEach(function (w) {
           var inCol = live.filter(function (r) { return (r.workflow || 'Other') === w; });
-          var gLeft = inCol.filter(function (r) { return !status(r); }).length;
+          var gLeft = inCol.filter(function (r) { return !isReviewed(r); }).length;
           var key = col.key + '|' + w;
           var limit = S.groupShow[key] || GROUP_SHOW;
           var items = groups[w];
@@ -235,7 +249,7 @@
 
       if (!isN && approved.length && !filtered) {
         var po = !!S.pileOpen[col.key];
-        h += '<button type="button" class="pile" data-act="pile" data-col="' + esc(col.key) + '" aria-expanded="' + po + '"><span>' + CHECK + approved.length + ' approved</span><b style="font-weight:500">' + (po ? 'Hide' : 'Show') + '</b></button>';
+        h += '<button type="button" class="pile" data-act="pile" data-col="' + esc(col.key) + '" aria-expanded="' + po + '"><span>' + CHECK + approved.length + ' agreed</span><b style="font-weight:500">' + (po ? 'Hide' : 'Show') + '</b></button>';
         if (po) approved.forEach(function (r) {
           var m = mine(r);
           h += '<div class="mini"><div class="row"><p>' + esc(r.requirement) + '</p><button type="button" class="linkbtn" data-act="unapprove" data-id="' + esc(r.id) + '">Undo</button></div>' +
@@ -246,7 +260,8 @@
         var dk = 'decided', dpo = !!S.pileOpen[dk];
         h += '<button type="button" class="pile dec" data-act="pile" data-col="' + dk + '" aria-expanded="' + dpo + '"><span>' + CHECK + decided.length + ' decided</span><b style="font-weight:500">' + (dpo ? 'Hide' : 'Show') + '</b></button>';
         if (dpo) decided.forEach(function (r) {
-          h += '<div class="mini"><p>' + esc(r.requirement) + '</p><p class="why">Decided: ' + esc(r.decision) + '</p></div>';
+          h += '<div class="mini"><p>' + esc(r.requirement) + '</p><p class="why"><b style="font-weight:500;color:var(--ink)">Decided: ' + esc(r.decision) + '</b>' +
+            (r.decisionDate ? ' \u00b7 ' + esc(r.decisionDate) : '') + (r.decisionRationale ? '<br>' + esc(r.decisionRationale) : '') + '</p></div>';
         });
       }
       h += '</section>';
@@ -259,9 +274,10 @@
   function card(r, grouped) {
     var m = mine(r), st = status(r), isN = r.category === N1C;
     var h = '<article class="card' + (st === 'moved' ? ' moved' : '') + '" data-id="' + esc(r.id) + '"' + (isN ? '' : ' draggable="true"') + '>';
-    if (st === 'moved') h += '<span class="badge b-moved">You moved this: ' + esc(r.category) + ' → ' + esc(m.to) + '</span>';
-    else if (st === 'commented') h += '<span class="badge b-comm">You commented</span>';
-    else if (st === 'approved') h += '<span class="badge b-ok">You approved this</span>';
+    if (st === 'moved') h += '<span class="badge b-moved">' + (m.to === N1C ? 'You asked for an N1C decision' : 'You moved this: ' + esc(r.category) + ' → ' + esc(m.to)) + '</span>';
+    else if (st === 'commented') h += '<span class="badge b-comm">You commented (not yet reviewed)</span>';
+    else if (st === 'clarify') h += '<span class="badge b-view">You asked for clarification</span>';
+    else if (st === 'agreed') h += '<span class="badge b-ok">You agreed with this placement</span>';
     h += '<p class="title">' + esc(r.requirement) + '</p>';
     h += '<div class="tags">' + (!grouped && r.workflow ? '<span class="tag">' + esc(r.workflow) + '</span>' : '') +
       (r.actor ? '<span class="tag">' + esc(r.actor) + '</span>' : '') + '<span class="rid">' + esc(r.id) + '</span></div>';
@@ -271,17 +287,23 @@
 
     if (isN) return h + n1cBlock(r) + '</article>';
 
-    if (m && m.comment) h += '<p class="mycomm">Your comment: ' + esc(m.comment) + '</p>';
+    if (m && m.comment) h += '<p class="mycomm">' + (st === 'clarify' ? 'Your question: ' : st === 'moved' ? 'Your reason: ' : 'Your comment: ') + esc(m.comment) + '</p>';
     h += '<div class="foot">';
     if (st === 'moved') {
       h += '<button type="button" class="btn" data-act="undomove" data-id="' + esc(r.id) + '">Undo move</button>';
       h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">Edit reason</button>';
-    } else if (st === 'approved') {
-      h += '<button type="button" class="btn" data-act="unapprove" data-id="' + esc(r.id) + '">Undo approval</button>';
+    } else if (st === 'agreed') {
+      h += '<button type="button" class="btn" data-act="unapprove" data-id="' + esc(r.id) + '">Undo</button>';
       h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">' + (m && m.comment ? 'Edit comment' : 'Comment') + '</button>';
     } else {
-      h += '<button type="button" class="btn approve" data-act="approve" data-id="' + esc(r.id) + '">' + CHECK + 'Approve</button>';
-      h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">' + (m && m.comment ? 'Edit comment' : 'Comment') + '</button>';
+      h += '<button type="button" class="btn approve" data-act="approve" data-id="' + esc(r.id) + '" title="The requirement is right and belongs in ' + esc(r.category) + '">' + CHECK + 'Agree</button>';
+      if (st === 'clarify') {
+        h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">Edit question</button>';
+        h += '<button type="button" class="btn" data-act="unclarify" data-id="' + esc(r.id) + '">Withdraw question</button>';
+      } else {
+        h += '<button type="button" class="btn" data-act="clarify" data-id="' + esc(r.id) + '">Unclear?</button>';
+        h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">' + (m && m.comment ? 'Edit comment' : 'Comment') + '</button>';
+      }
     }
     h += '<select class="movesel" data-act="move" data-id="' + esc(r.id) + '" aria-label="Move this card to another column"><option value="">Move to…</option>' +
       CATS.filter(function (c) { return c !== eff(r); }).map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '</select>';
@@ -292,7 +314,7 @@
   function n1cBlock(r) {
     var m = mine(r), myView = m && m.status === 'view' ? m.to : '';
     var others = (S.views[r.id] || []).filter(function (v) { return v.reviewer !== S.reviewer; });
-    var weighed = others.length + (m && !S.isOwner ? 1 : 0);
+    var weighed = others.filter(function (v) { return v.view; }).length + (myView && !S.isOwner ? 1 : 0);
     var open = !!S.viewsOpen[r.id];
     var h = '<div class="views"><p class="views-h">Your view before the discussion</p><div class="vchips">';
     ['MVP', 'Later', 'Out of Scope'].forEach(function (c) {
@@ -301,13 +323,14 @@
     h += '</div>';
     if (m && m.comment) h += '<p class="mycomm">Your note: ' + esc(m.comment) + '</p>';
     h += '<button type="button" class="btn" data-act="note" data-id="' + esc(r.id) + '" style="align-self:flex-start">' + (m && m.comment ? 'Edit note' : 'Add a note') + '</button>';
-    h += '<div class="vmeta"><span>' + weighed + ' of ' + S.reviewerCount + ' reviewers have weighed in</span>' +
+    h += '<div class="vmeta"><span>' + weighed + ' of ' + S.reviewerCount + ' reviewers have given a view</span>' +
       (others.length ? '<button type="button" class="linkbtn" data-act="views" data-id="' + esc(r.id) + '" aria-expanded="' + open + '">' + (open ? 'Hide views' : 'See views') + '</button>' : '') + '</div>';
     if (open && others.length) {
       h += '<ul class="others">' + others.map(function (v) {
-        return '<li><b style="font-weight:500">' + esc(v.reviewer) + '</b>: ' + esc(v.view || 'no view yet') + (v.comment ? ' — ' + esc(v.comment) : '') + '</li>';
+        return '<li><b style="font-weight:500">' + esc(v.reviewer) + '</b>: ' + esc(v.view || 'no view chosen yet') + (v.comment ? ' — ' + esc(v.comment) : '') + '</li>';
       }).join('') + '</ul>';
     }
+    if (!myView) h += '<p class="why">Choose MVP, Later or Out of Scope to count this as reviewed. A note alone doesn\u2019t count.</p>';
     h += '<p class="pending">Decision: pending discussion</p></div>';
     return h;
   }
@@ -388,7 +411,7 @@
     openDialog(
       reqHead(r) +
       '<div class="fromto"><span>' + esc(r.category) + '</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg><span style="background:var(--blue-t);color:var(--blue-d)">' + esc(to) + '</span></div>' +
-      '<label>Why should it move? <span class="opt">(required)</span><textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Move card'),
+      '<label>' + (to === N1C ? 'Why does this need an N1C decision?' : 'Why should it move?') + ' <span class="opt">(required)</span><textarea name="c" maxlength="2000">' + esc(m && m.status === 'moved' ? m.comment : '') + '</textarea></label>' + acts(to === N1C ? 'Ask for N1C decision' : 'Move card'),
       function () {
         var c = form.c.value.trim();
         if (!c) { showErr('Add a short reason so we know why it should move.'); return false; }
@@ -397,23 +420,39 @@
   }
 
   function openComment(id) {
-    var r = byId(id), m = mine(r), moved = m && m.status === 'moved';
+    var r = byId(id), m = mine(r), moved = m && m.status === 'moved', clar = m && m.status === 'clarify';
     openDialog(
       reqHead(r) +
-      '<label>' + (moved ? 'Why should it move? <span class="opt">(required)</span>' : 'Your comment <span class="opt">(optional; the card stays where it is)</span>') +
+      '<label>' + (moved ? 'Why should it move? <span class="opt">(required)</span>' : clar ? 'What needs clarifying? <span class="opt">(required)</span>' : 'Your comment <span class="opt">(the card stays where it is; a comment alone doesn\u2019t count as reviewed)</span>') +
       '<textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Save'),
       function () {
         var c = form.c.value.trim();
         if (moved) {
           if (!c) { showErr('A moved card needs a reason.'); return false; }
           setMine(id, { status: 'moved', to: m.to, comment: c });
-        } else if (m && m.status === 'approved') {
-          setMine(id, { status: 'approved', to: '', comment: c });
+        } else if (clar) {
+          if (!c) { showErr('Say what needs clarifying, or use \u201cWithdraw question\u201d.'); return false; }
+          setMine(id, { status: 'clarify', to: '', comment: c });
+        } else if (m && m.status === 'agreed') {
+          setMine(id, { status: 'agreed', to: '', comment: c });
         } else if (c) {
           setMine(id, { status: 'commented', to: '', comment: c });
         } else if (m) {
           setMine(id, null);
         }
+      });
+  }
+
+  function openClarify(id) {
+    var r = byId(id), m = mine(r);
+    openDialog(
+      reqHead(r) +
+      '<p class="small">Use this if you can\u2019t judge the requirement as written: the wording is ambiguous, something\u2019s missing, or you\u2019re unsure what it means. It stays unreviewed until it\u2019s clarified.</p>' +
+      '<label>What needs clarifying? <span class="opt">(required)</span><textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Ask for clarification'),
+      function () {
+        var c = form.c.value.trim();
+        if (!c) { showErr('Say briefly what\u2019s unclear.'); return false; }
+        setMine(id, { status: 'clarify', to: '', comment: c });
       });
   }
 
@@ -514,6 +553,8 @@
     else if (act === 'unapprove') unapprove(id);
     else if (act === 'undomove') undoMove(id);
     else if (act === 'comment') openComment(id);
+    else if (act === 'clarify') openClarify(id);
+    else if (act === 'unclarify') unclarify(id);
     else if (act === 'note') openNote(id);
     else if (act === 'view') setView(id, t.getAttribute('data-cat'));
     else if (act === 'views') { S.viewsOpen[id] = !S.viewsOpen[id]; renderBoard(); }
@@ -532,6 +573,11 @@
     if (t.id === 'filterSel') setFilter(t.value);
   });
   $('suggestBtn').addEventListener('click', function () { openSuggest(); });
+  var searchTimer = null;
+  $('searchBox').addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () { S.q = $('searchBox').value.trim().toLowerCase(); setFilter(S.filter); }, 150);
+  });
   function toggleSugg(open) {
     $('suggPanel').hidden = !open;
     $('suggJump').setAttribute('aria-expanded', String(open));
@@ -582,13 +628,14 @@
       return {
         id: String(r.id), requirement: r.requirement || '', workflow: r.workflow || '', actor: r.actor || '',
         category: normCat(r.category) || N1C, reason: r.reason || '', involves: r.involves || '',
-        question: r.question || '', decision: r.decision || ''
+        question: r.question || '', decision: r.decision || '',
+        decisionDate: r.decisionDate || '', decisionRationale: r.decisionRationale || ''
       };
     });
     S.mine = {};
     Object.keys(data.mine || {}).forEach(function (id) {
-      var m = data.mine[id];
-      S.mine[id] = { status: m.status, to: m.status === 'moved' || m.status === 'view' ? (normCat(m.to) || '') : '', comment: m.comment || '' };
+      var m = data.mine[id], st = m.status === 'approved' ? 'agreed' : m.status;   // older rows say "approved"
+      S.mine[id] = { status: st, to: st === 'moved' || st === 'view' ? (normCat(m.to) || '') : '', comment: m.comment || '' };
     });
     S.views = data.views || {};
     S.suggestions = data.suggestions || [];
@@ -667,7 +714,7 @@
     });
     reqs[20].question = 'Is a cancellation fee charged?'; reqs[20].involves = 'Finance lead';
     reqs[21].question = 'Which payment provider would take deposits?'; reqs[21].involves = 'Finance lead';
-    reqs[22].decision = 'MVP (agreed 4 Nov)';
+    reqs[22].decision = 'MVP'; reqs[22].decisionDate = '2026-11-04'; reqs[22].decisionRationale = 'Each location sets its own hours from day one.';
     return {
       reviewerCount: 3,
       requirements: reqs,
