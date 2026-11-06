@@ -8,5 +8,5 @@ window.REVIEW_CONFIG = {
   projectName: 'N1C',
 
   // Shown under the reviewer's name, e.g. 'Friday 20 November'. Leave empty to hide.
-  deadline: 'the end of Thursday 12 November (Pacific time)'
+  deadline: 'the end of Thursday 12 November'
 };
