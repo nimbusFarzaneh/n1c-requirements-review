@@ -20,12 +20,12 @@ var TABS = {
   Reviews: ['Reviewer', 'ID', 'Status', 'Suggested category', 'Comment', 'Updated'],
   Log: ['Timestamp', 'Reviewer', 'ID', 'Status', 'Suggested category', 'Comment'],
   Suggestions: ['Timestamp', 'Reviewer', 'Requirement', 'Workflow', 'Actor', 'Suggested category', 'Why', 'Decision', 'Decision note', 'ID'],
-  'Suggestion comments': ['Timestamp', 'Suggestion', 'Reviewer', 'Comment']
+  'Suggestion comments': ['Timestamp', 'Suggestion', 'Reviewer', 'Comment', 'ID']
 };
 // agreed = agrees with the placement; clarify = can't judge it as written; approved = older name for agreed.
 var STATUSES = ['agreed', 'approved', 'moved', 'commented', 'clarify', 'view', 'cleared'];
 // Columns added after the first version: created automatically at the end of the tab if missing.
-var ADDED_COLUMNS = { Requirements: ['Decision date', 'Decision rationale'], Reviewers: ['Role'], Suggestions: ['ID'] };
+var ADDED_COLUMNS = { Requirements: ['Decision date', 'Decision rationale'], Reviewers: ['Role'], Suggestions: ['ID'], 'Suggestion comments': ['ID'] };
 var CATEGORIES = ['MVP', 'Later', 'Out of Scope', 'Needs N1C Decision'];
 
 // ---------- menu and setup ----------
@@ -161,9 +161,12 @@ function authenticate(code) {
 
 function requirementIds() {
   var t = table('Requirements'), ids = {};
-  t.rows.forEach(function (r) { var id = text(t.get(r, 'ID')); if (id) ids[id] = text(t.get(r, 'Category')); });
+  t.rows.forEach(function (r) { var id = text(t.get(r, 'ID')); if (id) ids[id] = { category: text(t.get(r, 'Category')), decision: text(t.get(r, 'Decision')) }; });
   return ids;
 }
+
+/** Client-generated IDs make retries safe: the same ID twice means the same operation. */
+function validId(v) { v = String(v || ''); return /^[A-Za-z0-9-]{8,64}$/.test(v) ? v : ''; }
 
 // ---------- actions ----------
 
@@ -215,6 +218,7 @@ function saveReview(reviewer, b) {
   var comment = String(b.comment || '').trim();
   var ids = requirementIds();
   if (!(id in ids)) return { ok: false, error: 'unknown_requirement' };
+  if (ids[id].decision) return { ok: false, error: 'already_decided' };   // decided items are locked
   if (STATUSES.indexOf(status) < 0) return { ok: false, error: 'bad_status' };
   if (to && CATEGORIES.indexOf(to) < 0) return { ok: false, error: 'bad_category' };
   if (status === 'moved' && (!to || !comment)) return { ok: false, error: 'move_needs_reason' };
@@ -252,9 +256,17 @@ function saveSuggestion(reviewer, b) {
   var req = String(b.requirement || '').trim();
   if (!req) return { ok: false, error: 'missing_requirement' };
   var cat = CATEGORIES.indexOf(String(b.category || '')) >= 0 ? b.category : '';
-  var id = Utilities.getUuid();
-  table('Suggestions').append({ 'Timestamp': new Date(), 'Reviewer': safe(reviewer), 'Requirement': safe(req), 'Workflow': safe(b.workflow),
+  var id = validId(b.id) || Utilities.getUuid();
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+  var G = table('Suggestions');
+  if (findSuggestion(G, id) >= 0) return { ok: true, key: id, duplicate: true };   // a retry of something already saved
+  G.append({ 'Timestamp': new Date(), 'Reviewer': safe(reviewer), 'Requirement': safe(req), 'Workflow': safe(b.workflow),
     'Actor': safe(b.actor), 'Suggested category': cat, 'Why': safe(b.why), 'ID': id });
+  } finally {
+    lock.releaseLock();
+  }
   return { ok: true, key: id };
 }
 
@@ -278,6 +290,7 @@ function editSuggestion(reviewer, b, withdraw) {
   lock.waitLock(20000);
   try {
     var G = table('Suggestions'), at = findSuggestion(G, key);
+    if (at < 0 && withdraw) return { ok: true };   // already withdrawn (e.g. a retry)
     if (at < 0 || text(G.get(G.rows[at], 'Reviewer')) !== reviewer) return { ok: false, error: 'not_found' };
     if (text(G.get(G.rows[at], 'Decision') || G.get(G.rows[at], 'Triage'))) return { ok: false, error: 'already_decided' };
     var log = table('Log').sheet;
@@ -302,7 +315,10 @@ function commentSuggestion(reviewer, b) {
   var key = String(b.key || ''), comment = String(b.comment || '').trim();
   if (!key || !comment) return { ok: false, error: 'missing_comment' };
   if (findSuggestion(table('Suggestions'), key) < 0) return { ok: false, error: 'not_found' };
-  table('Suggestion comments').sheet.appendRow([new Date(), /^\d+$/.test(key) ? "'" + key : key, safe(reviewer), safe(comment)]);
+  var cid = validId(b.id);
+  var C = table('Suggestion comments');
+  if (cid && C.rows.some(function (r) { return text(C.get(r, 'ID')) === cid; })) return { ok: true, duplicate: true };
+  C.append({ 'Timestamp': new Date(), 'Suggestion': /^\d+$/.test(key) ? "'" + key : key, 'Reviewer': safe(reviewer), 'Comment': safe(comment), 'ID': cid });
   return { ok: true };
 }
 

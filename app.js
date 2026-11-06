@@ -55,7 +55,7 @@
   function eff(r) { var m = mine(r); return (m && m.status === 'moved' && m.to) ? m.to : r.category; }
   // A requirement is decided once the owner fills in its Decision in the sheet, whatever its column.
   function isDecided(r) { return String(r.decision || '').trim() !== ''; }
-  function reviewable(r) { return !isDecided(r); }
+  function reviewable(r) { return !!r.category && !isDecided(r); }
   // Only a real position counts as reviewed: agreeing, moving, or (for N1C items) choosing a view.
   // Comments and clarification requests don't.
   function isReviewed(r) {
@@ -89,13 +89,18 @@
       if (onDone) onDone(res);
     }, function (e) {
       pending--;
-      if (e && e.code === 'already_decided') { toast('That suggestion already has a decision, so it can\u2019t be changed.'); refresh(); return; }
-      failed.push(payload); setSave('err');
+      if (e && e.code === 'already_decided') { toast('That item already has a decision, so it can\u2019t be changed.'); if (!pending) setSave(failed.length ? 'err' : 'ok'); refresh(); return; }
+      failed.push({ body: body, onDone: onDone }); setSave('err');
     });
   }
+  // Retrying sends the same request again, with the same ID, so the server can tell it's a repeat.
   function retry() {
     var list = failed; failed = [];
-    list.forEach(function (p) { var b = Object.assign({}, p); delete b.code; save(b); });
+    list.forEach(function (f) { save(f.body, f.onDone); });
+  }
+  function newId() {
+    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
   }
   function setSave(state) {
     var el = $('saveState');
@@ -501,11 +506,12 @@
           save(Object.assign({ action: 'editSuggestion', key: ex.key }, s));
           return;
         }
-        var item = Object.assign({ reviewer: S.reviewer, triage: '', note: '', key: '', comments: [] }, s);
+        var sid = newId();
+        var item = Object.assign({ reviewer: S.reviewer, triage: '', note: '', key: sid, comments: [] }, s);
         S.suggestions.push(item);
         renderSuggestions();
         toggleSugg(true);
-        save(Object.assign({ action: 'suggest' }, s), function (res) { item.key = res && res.key || ''; renderSuggestions(); });
+        save(Object.assign({ action: 'suggest', id: sid }, s));
       });
   }
 
@@ -518,7 +524,7 @@
         if (!c) { showErr('Write a comment first.'); return false; }
         s.comments = (s.comments || []).concat([{ reviewer: S.reviewer, comment: c }]);
         renderSuggestions();
-        save({ action: 'commentSuggestion', key: s.key, comment: c });
+        save({ action: 'commentSuggestion', key: s.key, comment: c, id: newId() });
       });
   }
 
@@ -626,7 +632,7 @@
     S.reqs = (data.requirements || []).map(function (r) {
       return {
         id: String(r.id), requirement: r.requirement || '', workflow: r.workflow || '', actor: r.actor || '',
-        category: normCat(r.category) || N1C, reason: r.reason || '', involves: r.involves || '',
+        category: normCat(r.category), rawCategory: r.category || '', reason: r.reason || '', involves: r.involves || '',
         question: r.question || '', decision: r.decision || '',
         decisionDate: r.decisionDate || '', decisionRationale: r.decisionRationale || ''
       };
@@ -639,6 +645,12 @@
     S.views = data.views || {};
     S.suggestions = data.suggestions || [];
     $('who').innerHTML = 'Signed in as <b>' + esc(S.reviewer) + '</b>' + (S.isOwner ? ' (owner, not counted)' : '');
+    // Requirements whose Category isn't one of the four columns are left off the board and flagged, not guessed.
+    var bad = S.reqs.filter(function (r) { return !r.category; });
+    $('dataWarn').hidden = !bad.length;
+    if (bad.length) $('dataWarn').textContent = bad.length + (bad.length === 1 ? ' requirement isn\u2019t' : ' requirements aren\u2019t') +
+      ' shown because its Category isn\u2019t MVP, Later, Out of Scope or Needs N1C Decision: ' +
+      bad.slice(0, 10).map(function (r) { return r.id + ' (\u201c' + r.rawCategory + '\u201d)'; }).join(', ') + (bad.length > 10 ? ', \u2026' : '') + '. Fix it in the Requirements tab, then click Refresh.';
   }
 
   function refresh() {
