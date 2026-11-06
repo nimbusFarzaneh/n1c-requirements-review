@@ -127,7 +127,7 @@
     var r = byId(id); if (!r) return;
     var prev = copy(S.mine[id]);
     setMine(id, { status: 'agreed', to: '', comment: prev && prev.comment || '' });
-    toast('Agreed with ' + r.id.replace(/-/g, '\u2011') + ' in ' + r.category + '. It\u2019s now in the agreed pile.', function () { setMine(id, prev); });
+    toast('Agreed with ' + r.id.replace(/-/g, '\u2011') + '.', function () { setMine(id, prev); });
   }
   function unapprove(id) {
     var m = S.mine[id];
@@ -433,7 +433,7 @@
         if (!c) { showErr('Add a short reason so we know why it should move.'); return false; }
         var prev = copy(S.mine[id]);
         setMine(id, { status: 'moved', to: to, comment: c });
-        toast('Moved ' + r.id.replace(/-/g, '\u2011') + ' to ' + to + '. It\u2019s in that column\u2019s \u201cmoved here\u201d pile.', function () { setMine(id, prev); });
+        toast('Moved ' + r.id.replace(/-/g, '\u2011') + ' to ' + to + '.', function () { setMine(id, prev); });
       });
   }
 
