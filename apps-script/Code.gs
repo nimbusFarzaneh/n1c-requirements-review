@@ -69,6 +69,10 @@ function doPost(e) {
       if (body.signin) table('Log').sheet.appendRow([new Date(), safe(reviewer), '', 'signed in', '', '']);
       return json(loadState(reviewer, who.owner));
     }
+    if (body.action === 'signout') {
+      table('Log').sheet.appendRow([new Date(), safe(reviewer), '', 'signed out', '', '']);
+      return json({ ok: true });
+    }
     if (body.action === 'review') return json(saveReview(reviewer, body));
     if (body.action === 'suggest') return json(saveSuggestion(reviewer, body));
     return json({ ok: false, error: 'unknown_action' });

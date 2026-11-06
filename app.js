@@ -426,6 +426,7 @@
   $('suggestBtn').addEventListener('click', openSuggest);
   $('refreshBtn').addEventListener('click', function () { refresh(); });
   $('logoutBtn').addEventListener('click', function () {
+    if (S.code && !S.demo) api({ action: 'signout', code: S.code }).catch(function () {});
     store(STORE_KEY, null); S.code = null; $('app').hidden = true; $('login').hidden = false; $('codeInput').value = '';
   });
 

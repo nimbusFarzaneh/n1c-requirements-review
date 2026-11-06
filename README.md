@@ -76,7 +76,7 @@ Add yourself as a reviewer with a test code, sign in, approve a card, move one, 
 ## During and after the review
 
 - **Freeze the requirements** once reviewers start. Editing wording is fine, but avoid changing IDs or adding or removing rows.
-- **Sign-ins:** the **Log** tab records each time someone signs in or reopens the board (Status `signed in`), so you can see who has started.
+- **Sign-ins:** the **Log** tab records each time someone signs in or reopens the board (Status `signed in`), and when they click **Sign out** (`signed out`), so you can see who has started. Closing the tab without signing out isn't recorded.
 - **Summary:** choose **Review board → Refresh summary** in the sheet. It builds a **Summary** tab with one row per requirement, each reviewer's position and comment, and an Agreement column (All approved, Disagreement, Incomplete, Views differ, and so on).
 - **Suggestions:** fill in **Triage** (e.g. `Added`, `Merged with R-042`, `Declined`) and **Triage note**. Reviewers see the result on the board.
 - **N1C decisions:** after the discussion, fill in **Decision** on each requirement. To actually move it into a column, change its **Category** too.
