@@ -46,6 +46,7 @@
   }
   function store(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
   function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  var ARROW = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>';
   var CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>';
 
   function byId(id) { for (var i = 0; i < S.reqs.length; i++) if (S.reqs[i].id === id) return S.reqs[i]; return null; }
@@ -156,7 +157,7 @@
   function renderFilters() {
     var pool = S.reqs.filter(reviewable);
     var counts = {
-      open: pool.filter(function (r) { return status(r) !== 'agreed'; }).length,
+      open: pool.filter(function (r) { return status(r) !== 'agreed' && status(r) !== 'moved'; }).length,
       todo: pool.filter(function (r) { return !isReviewed(r); }).length,
       moved: pool.filter(function (r) { return status(r) === 'moved'; }).length,
       commented: pool.filter(function (r) { return mine(r) && mine(r).comment; }).length,
@@ -192,7 +193,7 @@
     if (S.filter === 'moved') return st === 'moved';
     if (S.filter === 'commented') return !!(m && m.comment);
     if (S.filter === 'agreed') return st === 'agreed';
-    return st !== 'agreed';
+    return st !== 'agreed' && st !== 'moved';   // agreed and moved cards fold into piles
   }
 
   function shownIn(colKey) {
@@ -247,6 +248,16 @@
         shown.forEach(function (r) { h += card(r, false); });
       }
 
+      var movedHere = live.filter(function (r) { return status(r) === 'moved'; });
+      if (movedHere.length && !filtered) {
+        var mk = 'moved|' + col.key, mpo = !!S.pileOpen[mk];
+        h += '<button type="button" class="pile mv" data-act="pile" data-col="' + esc(mk) + '" aria-expanded="' + mpo + '"><span>' + ARROW + movedHere.length + ' moved here by you</span><b style="font-weight:500">' + (mpo ? 'Hide' : 'Show') + '</b></button>';
+        if (mpo) movedHere.forEach(function (r) {
+          var m = mine(r);
+          h += '<div class="mini"><p>' + esc(r.requirement) + '</p><p class="why">' + esc(r.id) + ' \u00b7 from ' + esc(r.category) + ' \u00b7 Your reason: ' + esc(m.comment) + '</p>' +
+            '<div class="row" style="justify-content:flex-start;gap:14px"><button type="button" class="linkbtn" data-act="undomove" data-id="' + esc(r.id) + '">Undo move</button><button type="button" class="linkbtn" data-act="comment" data-id="' + esc(r.id) + '">Edit reason</button></div></div>';
+        });
+      }
       if (!isN && approved.length && !filtered) {
         var po = !!S.pileOpen[col.key];
         h += '<button type="button" class="pile" data-act="pile" data-col="' + esc(col.key) + '" aria-expanded="' + po + '"><span>' + CHECK + approved.length + ' agreed</span><b style="font-weight:500">' + (po ? 'Hide' : 'Show') + '</b></button>';
@@ -415,7 +426,9 @@
       function () {
         var c = form.c.value.trim();
         if (!c) { showErr('Add a short reason so we know why it should move.'); return false; }
+        var prev = copy(S.mine[id]);
         setMine(id, { status: 'moved', to: to, comment: c });
+        toast('Moved ' + r.id.replace(/-/g, '\u2011') + ' to ' + to + '. It\u2019s in that column\u2019s \u201cmoved here\u201d pile.', function () { setMine(id, prev); });
       });
   }
 
