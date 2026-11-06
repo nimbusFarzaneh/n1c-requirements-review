@@ -155,7 +155,13 @@ function authenticate(code) {
   code = String(code || '').trim();
   if (!code) return null;
   var list = activeReviewers();
-  for (var i = 0; i < list.length; i++) if (list[i].code === code) return list[i];
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].code !== code) continue;
+    // Feedback is stored under the reviewer's name, so two active reviewers must not share one.
+    var same = list.filter(function (r) { return r.name === list[i].name; }).length;
+    if (same > 1) throw new Error('Two active reviewers are both called "' + list[i].name + '". Give each a different name in the Reviewers tab.');
+    return list[i];
+  }
   return null;
 }
 
@@ -219,6 +225,10 @@ function saveReview(reviewer, b) {
   var ids = requirementIds();
   if (!(id in ids)) return { ok: false, error: 'unknown_requirement' };
   if (ids[id].decision) return { ok: false, error: 'already_decided' };   // decided items are locked
+  // N1C items take a view; other items are agreed with, moved, questioned or commented on.
+  var isN = ids[id].category === 'Needs N1C Decision';
+  if (isN && ['agreed', 'approved', 'moved', 'clarify'].indexOf(status) >= 0) return { ok: false, error: 'not_allowed' };
+  if (!isN && status === 'view') return { ok: false, error: 'not_allowed' };
   if (STATUSES.indexOf(status) < 0) return { ok: false, error: 'bad_status' };
   if (to && CATEGORIES.indexOf(to) < 0) return { ok: false, error: 'bad_category' };
   if (status === 'moved' && (!to || !comment)) return { ok: false, error: 'move_needs_reason' };
@@ -316,9 +326,15 @@ function commentSuggestion(reviewer, b) {
   if (!key || !comment) return { ok: false, error: 'missing_comment' };
   if (findSuggestion(table('Suggestions'), key) < 0) return { ok: false, error: 'not_found' };
   var cid = validId(b.id);
-  var C = table('Suggestion comments');
-  if (cid && C.rows.some(function (r) { return text(C.get(r, 'ID')) === cid; })) return { ok: true, duplicate: true };
-  C.append({ 'Timestamp': new Date(), 'Suggestion': /^\d+$/.test(key) ? "'" + key : key, 'Reviewer': safe(reviewer), 'Comment': safe(comment), 'ID': cid });
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var C = table('Suggestion comments');
+    if (cid && C.rows.some(function (r) { return text(C.get(r, 'ID')) === cid; })) return { ok: true, duplicate: true };
+    C.append({ 'Timestamp': new Date(), 'Suggestion': /^\d+$/.test(key) ? "'" + key : key, 'Reviewer': safe(reviewer), 'Comment': safe(comment), 'ID': cid });
+  } finally {
+    lock.releaseLock();
+  }
   return { ok: true };
 }
 

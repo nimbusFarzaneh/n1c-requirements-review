@@ -26,7 +26,7 @@
     code: null, reviewer: '', isOwner: false, reviewerCount: 3,
     reqs: [], mine: {}, views: {}, suggestions: [],
     filter: 'open', workflow: '', q: '',
-    pileOpen: {}, groupShow: {}, viewsOpen: {}, mobileCol: 'MVP'
+    pileOpen: {}, groupShow: {}, viewsOpen: {}, mobileCol: 'MVP', seq: {}
   };
 
   // ---------- helpers ----------
@@ -82,6 +82,11 @@
 
   var queue = Promise.resolve(), pending = 0, failed = [];
   function save(body, onDone) {
+    // A newer change to the same card replaces any older one that failed, so Retry can't bring back a stale choice.
+    if (body.action === 'review') {
+      failed = failed.filter(function (f) { return !(f.body.action === 'review' && f.body.id === body.id); });
+      body.seq = (S.seq[body.id] = (S.seq[body.id] || 0) + 1);
+    }
     pending++; setSave('busy');
     var payload = Object.assign({ code: S.code }, body);
     queue = queue.then(function () { return api(payload); }).then(function (res) {
@@ -90,13 +95,14 @@
     }, function (e) {
       pending--;
       if (e && e.code === 'already_decided') { toast('That item already has a decision, so it can\u2019t be changed.'); if (!pending) setSave(failed.length ? 'err' : 'ok'); refresh(); return; }
+      if (body.action === 'review' && body.seq !== S.seq[body.id]) { if (!pending) setSave(failed.length ? 'err' : 'ok'); return; }   // already superseded
       failed.push({ body: body, onDone: onDone }); setSave('err');
     });
   }
   // Retrying sends the same request again, with the same ID, so the server can tell it's a repeat.
   function retry() {
     var list = failed; failed = [];
-    list.forEach(function (f) { save(f.body, f.onDone); });
+    list.forEach(function (f) { var b = Object.assign({}, f.body); delete b.seq; save(b, f.onDone); });
   }
   function newId() {
     try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
@@ -654,8 +660,13 @@
   }
 
   function refresh() {
+    if (failed.length) { toast('Some changes haven\u2019t saved yet. Click Retry first.'); return Promise.resolve(); }
     $('refreshBtn').textContent = 'Refreshing…';
-    return api({ action: 'load', code: S.code }).then(function (data) { apply(data); renderAll(); })
+    // Wait for any saves still in progress, so the reload includes them.
+    return queue.then(function () { return api({ action: 'load', code: S.code }); }).then(function (data) {
+      if (failed.length || pending) return;   // something changed while loading; keep what's on screen
+      apply(data); renderAll();
+    })
       .catch(function () { toast('Couldn’t refresh. Check your connection and try again.'); })
       .then(function () { $('refreshBtn').textContent = 'Refresh'; });
   }
