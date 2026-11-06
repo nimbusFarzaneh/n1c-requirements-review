@@ -14,7 +14,8 @@
     { key: 'open', label: 'Everything open' },
     { key: 'todo', label: 'Not yet reviewed' },
     { key: 'moved', label: 'Moved by me' },
-    { key: 'commented', label: 'With my comments' }
+    { key: 'commented', label: 'With my comments' },
+    { key: 'approved', label: 'Approved by me' }
   ];
   var GROUP_AT = 12;   // group a column by workflow once it has more open cards than this
   var GROUP_SHOW = 6;  // cards shown per group before "Show more"
@@ -142,7 +143,8 @@
       open: pool.filter(function (r) { return status(r) !== 'approved'; }).length,
       todo: pool.filter(function (r) { return !status(r); }).length,
       moved: pool.filter(function (r) { return status(r) === 'moved'; }).length,
-      commented: pool.filter(function (r) { return mine(r) && mine(r).comment; }).length
+      commented: pool.filter(function (r) { return mine(r) && mine(r).comment; }).length,
+      approved: pool.filter(function (r) { return status(r) === 'approved'; }).length
     };
     $('filters').innerHTML = FILTERS.map(function (f) {
       return '<button type="button" class="chip" data-act="filter" data-f="' + f.key + '" aria-pressed="' + (S.filter === f.key) + '">' + esc(f.label) + ' (' + counts[f.key] + ')</button>';
@@ -161,7 +163,8 @@
     if (S.filter === 'todo') return !st;
     if (S.filter === 'moved') return st === 'moved';
     if (S.filter === 'commented') return !!(m && m.comment);
-    return true;
+    if (S.filter === 'approved') return st === 'approved';
+    return st !== 'approved';
   }
 
   function renderBoard() {
@@ -172,7 +175,7 @@
       var approved = live.filter(function (r) { return status(r) === 'approved'; });
       var open = live.filter(function (r) { return status(r) !== 'approved'; });
       var left = open.filter(function (r) { return !status(r); }).length;
-      var shown = open.filter(passFilter);
+      var shown = (S.filter === 'approved' || S.filter === 'commented' ? live : open).filter(passFilter);
       var isN = col.key === N1C;
 
       var h = '<section class="colm" data-col="' + esc(col.key) + '" style="--c:' + col.color + '" aria-label="' + esc(col.key) + '">';
@@ -182,7 +185,7 @@
       if (!isN) h += '<div class="dropzone">Drop here to move to ' + esc(col.key) + '</div>';
 
       if (!shown.length) {
-        h += '<p class="empty">' + (open.length ? 'Nothing here matches this filter.' : (approved.length ? 'All done here.' : 'No items.')) + '</p>';
+        h += '<p class="empty">' + (S.filter === 'approved' ? (isN ? 'These are settled by discussion, not approved.' : 'You haven\u2019t approved anything here yet.') : open.length ? 'Nothing here matches this filter.' : (approved.length ? 'All done here.' : 'No items.')) + '</p>';
       } else if (shown.length > GROUP_AT) {
         var groups = {};
         shown.forEach(function (r) { var w = r.workflow || 'Other'; (groups[w] = groups[w] || []).push(r); });
@@ -202,7 +205,7 @@
         shown.forEach(function (r) { h += card(r, false); });
       }
 
-      if (!isN && approved.length) {
+      if (!isN && approved.length && S.filter !== 'approved') {
         var po = !!S.pileOpen[col.key];
         h += '<button type="button" class="pile" data-act="pile" data-col="' + esc(col.key) + '" aria-expanded="' + po + '"><span>' + CHECK + approved.length + ' approved</span><b style="font-weight:500">' + (po ? 'Hide' : 'Show') + '</b></button>';
         if (po) approved.forEach(function (r) {
@@ -229,6 +232,7 @@
     var h = '<article class="card' + (st === 'moved' ? ' moved' : '') + '" data-id="' + esc(r.id) + '"' + (isN ? '' : ' draggable="true"') + '>';
     if (st === 'moved') h += '<span class="badge b-moved">You moved this: ' + esc(r.category) + ' → ' + esc(m.to) + '</span>';
     else if (st === 'commented') h += '<span class="badge b-comm">You commented</span>';
+    else if (st === 'approved') h += '<span class="badge b-ok">You approved this</span>';
     h += '<p class="title">' + esc(r.requirement) + '</p>';
     h += '<div class="tags">' + (!grouped && r.workflow ? '<span class="tag">' + esc(r.workflow) + '</span>' : '') +
       (r.actor ? '<span class="tag">' + esc(r.actor) + '</span>' : '') + '<span class="rid">' + esc(r.id) + '</span></div>';
@@ -243,6 +247,9 @@
     if (st === 'moved') {
       h += '<button type="button" class="btn" data-act="undomove" data-id="' + esc(r.id) + '">Undo move</button>';
       h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">Edit reason</button>';
+    } else if (st === 'approved') {
+      h += '<button type="button" class="btn" data-act="unapprove" data-id="' + esc(r.id) + '">Undo approval</button>';
+      h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">' + (m && m.comment ? 'Edit comment' : 'Comment') + '</button>';
     } else {
       h += '<button type="button" class="btn approve" data-act="approve" data-id="' + esc(r.id) + '">' + CHECK + 'Approve</button>';
       h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">' + (m && m.comment ? 'Edit comment' : 'Comment') + '</button>';
