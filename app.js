@@ -73,13 +73,16 @@
   }
 
   var queue = Promise.resolve(), pending = 0, failed = [];
-  function save(body) {
+  function save(body, onDone) {
     pending++; setSave('busy');
     var payload = Object.assign({ code: S.code }, body);
-    queue = queue.then(function () { return api(payload); }).then(function () {
+    queue = queue.then(function () { return api(payload); }).then(function (res) {
       pending--; if (!pending) setSave(failed.length ? 'err' : 'ok');
-    }, function () {
-      pending--; failed.push(payload); setSave('err');
+      if (onDone) onDone(res);
+    }, function (e) {
+      pending--;
+      if (e && e.code === 'already_decided') { toast('That suggestion already has a decision, so it can\u2019t be changed.'); refresh(); return; }
+      failed.push(payload); setSave('err');
     });
   }
   function retry() {
@@ -295,7 +298,7 @@
     var list = S.suggestions;
     $('suggCount').textContent = list.length;
     if (!list.length) { $('suggList').innerHTML = '<p class="small">No suggestions yet. If something is missing from the board, use \u201cSuggest a missing requirement\u201d.</p>'; return; }
-    $('suggList').innerHTML = list.map(function (s) {
+    $('suggList').innerHTML = list.map(function (s, i) {
       var who = s.reviewer === S.reviewer ? 'you' : s.reviewer;
       var decided = !!s.triage;
       var h = '<article class="scard">';
@@ -310,7 +313,23 @@
       if (s.actor) h += '<dt>Who needs it</dt><dd>' + esc(s.actor.split(';').map(function (x) { return x.trim(); }).filter(Boolean).join(', ')) + '</dd>';
       if (s.why) h += '<dt>Why</dt><dd>' + esc(s.why) + '</dd>';
       if (decided && s.note) h += '<dt>Note</dt><dd>' + esc(s.note) + '</dd>';
-      h += '</dl></article>';
+      h += '</dl>';
+      var cs = s.comments || [];
+      if (cs.length) {
+        h += '<ul class="scomm">' + cs.map(function (c) {
+          return '<li><b>' + esc(c.reviewer === S.reviewer ? 'You' : c.reviewer) + ':</b> ' + esc(c.comment) + '</li>';
+        }).join('') + '</ul>';
+      }
+      h += '<div class="sacts">';
+      if (!s.key) h += '<span class="small">Saving\u2026</span>';
+      else {
+        h += '<button type="button" class="linkbtn" data-act="scomment" data-i="' + i + '">Comment</button>';
+        if (s.reviewer === S.reviewer && !decided) {
+          h += '<button type="button" class="linkbtn" data-act="sedit" data-i="' + i + '">Edit</button>';
+          h += '<button type="button" class="linkbtn" data-act="swithdraw" data-i="' + i + '">Withdraw</button>';
+        }
+      }
+      h += '</div></article>';
       return h;
     }).join('');
   }
@@ -386,35 +405,68 @@
       });
   }
 
-  function openSuggest() {
+  function openSuggest(existing) {
+    var ex = existing || null;
     var wfs = {}, acs = {};
     S.reqs.forEach(function (r) {
       if (r.workflow) wfs[r.workflow] = 1;
       String(r.actor || '').split(';').forEach(function (a) { a = a.trim(); if (a) acs[a] = 1; });
     });
     var actors = Object.keys(acs).sort(function (a, b) { return a.localeCompare(b); });
+    var exActors = ex ? String(ex.actor || '').split(';').map(function (a) { return a.trim(); }).filter(Boolean) : [];
+    var exOther = exActors.filter(function (a) { return actors.indexOf(a) < 0; });
     openDialog(
-      '<h2>Suggest a missing requirement</h2>' +
+      '<h2>' + (ex ? 'Edit your suggestion' : 'Suggest a missing requirement') + '</h2>' +
       '<p class="small">Everyone reviewing can see suggestions. They aren\u2019t added to the board during the review; each one gets a decision afterwards.</p>' +
-      '<label>What\u2019s needed? <span class="opt">(required)</span><textarea name="req" maxlength="1000" style="min-height:72px"></textarea></label>' +
-      '<label>Why is it needed? <span class="opt">(required)</span><textarea name="why" maxlength="2000" style="min-height:72px"></textarea></label>' +
+      '<label>What\u2019s needed? <span class="opt">(required)</span><textarea name="req" maxlength="1000" style="min-height:72px">' + esc(ex ? ex.requirement : '') + '</textarea></label>' +
+      '<label>Why is it needed? <span class="opt">(required)</span><textarea name="why" maxlength="2000" style="min-height:72px">' + esc(ex ? ex.why : '') + '</textarea></label>' +
       '<label>Workflow <span class="opt">(optional)</span><select name="wf"><option value="">Not sure</option>' +
-        Object.keys(wfs).sort().map(function (w) { return '<option>' + esc(w) + '</option>'; }).join('') + '</select></label>' +
+        Object.keys(wfs).sort().map(function (w) { return '<option' + (ex && ex.workflow === w ? ' selected' : '') + '>' + esc(w) + '</option>'; }).join('') + '</select></label>' +
       '<fieldset class="actors"><legend>Who needs it? <span class="opt">(optional, pick any)</span></legend><div class="actor-grid">' +
-        actors.map(function (a) { return '<label class="chk"><input type="checkbox" name="actor" value="' + esc(a) + '"> ' + esc(a) + '</label>'; }).join('') +
-      '</div><label style="margin-top:8px">Someone else <span class="opt">(optional)</span><input name="actorOther" maxlength="120"></label></fieldset>' +
+        actors.map(function (a) { return '<label class="chk"><input type="checkbox" name="actor" value="' + esc(a) + '"' + (exActors.indexOf(a) >= 0 ? ' checked' : '') + '> ' + esc(a) + '</label>'; }).join('') +
+      '</div><label style="margin-top:8px">Someone else <span class="opt">(optional)</span><input name="actorOther" maxlength="120" value="' + esc(exOther.join('; ')) + '"></label></fieldset>' +
       '<label>Where do you think it belongs? <span class="opt">(optional)</span><select name="cat"><option value="">Not sure</option>' +
-        CATS.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
-      acts('Submit suggestion'),
+        CATS.map(function (c) { return '<option' + (ex && ex.category === c ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
+      acts(ex ? 'Save changes' : 'Submit suggestion'),
       function () {
         var picked = Array.prototype.filter.call(form.querySelectorAll('input[name="actor"]'), function (x) { return x.checked; }).map(function (x) { return x.value; });
         var other = form.actorOther.value.trim(); if (other) picked.push(other);
         var s = { requirement: form.req.value.trim(), workflow: form.wf.value, actor: picked.join('; '), category: form.cat.value, why: form.why.value.trim() };
         if (!s.requirement || !s.why) { showErr('Please describe what\u2019s needed and why.'); return false; }
-        S.suggestions.push(Object.assign({ reviewer: S.reviewer, triage: '', note: '' }, s));
+        if (ex) {
+          if (ex.requirement === s.requirement && ex.why === s.why && ex.workflow === s.workflow && ex.actor === s.actor && ex.category === s.category) return;
+          Object.assign(ex, s); renderSuggestions();
+          save(Object.assign({ action: 'editSuggestion', key: ex.key }, s));
+          return;
+        }
+        var item = Object.assign({ reviewer: S.reviewer, triage: '', note: '', key: '', comments: [] }, s);
+        S.suggestions.push(item);
         renderSuggestions();
         toggleSugg(true);
-        save(Object.assign({ action: 'suggest' }, s));
+        save(Object.assign({ action: 'suggest' }, s), function (res) { item.key = res && res.key || ''; renderSuggestions(); });
+      });
+  }
+
+  function openSuggComment(s) {
+    openDialog(
+      '<p class="small reqid">Suggestion by ' + esc(s.reviewer === S.reviewer ? 'you' : s.reviewer) + '</p><h2 class="reqh">' + esc(s.requirement) + '</h2>' +
+      '<label>Your comment <span class="opt">(everyone reviewing can see it)</span><textarea name="c" maxlength="2000"></textarea></label>' + acts('Add comment'),
+      function () {
+        var c = form.c.value.trim();
+        if (!c) { showErr('Write a comment first.'); return false; }
+        s.comments = (s.comments || []).concat([{ reviewer: S.reviewer, comment: c }]);
+        renderSuggestions();
+        save({ action: 'commentSuggestion', key: s.key, comment: c });
+      });
+  }
+
+  function openWithdraw(s, i) {
+    openDialog(
+      '<h2>Withdraw this suggestion?</h2><p class="small">\u201c' + esc(s.requirement) + '\u201d will be removed for everyone.</p>' + acts('Withdraw'),
+      function () {
+        S.suggestions.splice(i, 1);
+        renderSuggestions();
+        save({ action: 'withdrawSuggestion', key: s.key });
       });
   }
 
@@ -445,6 +497,9 @@
     else if (act === 'pile') { var c = t.getAttribute('data-col'); S.pileOpen[c] = !S.pileOpen[c]; renderBoard(); }
     else if (act === 'filter') { S.filter = t.getAttribute('data-f'); renderFilters(); renderBoard(); }
     else if (act === 'retry') retry();
+    else if (act === 'scomment') openSuggComment(S.suggestions[+t.getAttribute('data-i')]);
+    else if (act === 'sedit') openSuggest(S.suggestions[+t.getAttribute('data-i')]);
+    else if (act === 'swithdraw') openWithdraw(S.suggestions[+t.getAttribute('data-i')], +t.getAttribute('data-i'));
     else if (act === 'coltab') { S.mobileCol = t.getAttribute('data-col'); renderBoard(); var y = $('board').getBoundingClientRect().top + window.scrollY - $('coltabs').offsetHeight - 8; if (window.scrollY > y) window.scrollTo(0, y); }
   });
   document.addEventListener('change', function (e) {
@@ -452,7 +507,7 @@
     if (t.matches('select[data-act="move"]') && t.value) requestMove(t.getAttribute('data-id'), t.value);
     if (t.id === 'wfSel') { S.workflow = t.value; renderBoard(); }
   });
-  $('suggestBtn').addEventListener('click', openSuggest);
+  $('suggestBtn').addEventListener('click', function () { openSuggest(); });
   function toggleSugg(open) {
     $('suggPanel').hidden = !open;
     $('suggJump').setAttribute('aria-expanded', String(open));
@@ -554,7 +609,7 @@
     return new Promise(function (resolve) {
       setTimeout(function () {
         if (body.action === 'load') resolve(JSON.parse(JSON.stringify(Object.assign({ ok: true, reviewer: 'Demo reviewer' }, DEMO))));
-        else resolve({ ok: true });
+        else resolve(body.action === 'suggest' ? { ok: true, key: String(Math.round(Date.now() / 1000)) } : { ok: true });
       }, body.action === 'load' ? 300 : 250);
     });
   }
@@ -595,7 +650,7 @@
       requirements: reqs,
       mine: {},
       views: { 'R-021': [{ reviewer: 'Reviewer 2', view: 'MVP', comment: 'A fee is fine if shown before booking.' }, { reviewer: 'Reviewer 3', view: 'Later', comment: '' }] },
-      suggestions: [{ reviewer: 'Reviewer 2', requirement: 'Staff can block out time for breaks', workflow: 'Scheduling', actor: 'Staff', category: 'MVP', why: 'Breaks are booked over today.', triage: '', note: '' }]
+      suggestions: [{ reviewer: 'Reviewer 2', requirement: 'Staff can block out time for breaks', workflow: 'Scheduling', actor: 'Staff', category: 'MVP', why: 'Breaks are booked over today.', triage: '', note: '', key: '1', comments: [{ reviewer: 'Reviewer 3', comment: 'Agree, this happens weekly.' }] }]
     };
   }
 

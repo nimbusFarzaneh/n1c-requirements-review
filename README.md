@@ -78,6 +78,7 @@ Add yourself as a reviewer with a test code, sign in, approve a card, move one, 
 - **Freeze the requirements** once reviewers start. Editing wording is fine, but avoid changing IDs or adding or removing rows.
 - **Sign-ins:** the **Log** tab records each time someone signs in or reopens the board (Status `signed in`), and when they click **Sign out** (`signed out`), so you can see who has started. Closing the tab without signing out isn't recorded.
 - **Summary:** choose **Review board → Refresh summary** in the sheet. It builds a **Summary** tab with one row per requirement, each reviewer's position and comment, and an Agreement column (All approved, Disagreement, Incomplete, Views differ, and so on).
+- **Suggestion comments:** reviewers can comment on any suggestion, and edit or withdraw their own until it has a decision. Comments are stored in a **Suggestion comments** tab (created automatically the first time someone comments); edits and withdrawals are recorded in the Log.
 - **Suggestions:** after the review, fill in **Decision** (e.g. `Added as MVP`, `Merged with FR-REC-03`, `Declined`) and optionally **Decision note** in the Suggestions tab. Until then the board shows "Not decided yet"; afterwards it shows your decision. (If your tab still has the older headers **Triage** / **Triage note**, rename them to **Decision** / **Decision note**; the old names also still work.)
 - **N1C decisions:** after the discussion, fill in **Decision** on each requirement. To actually move it into a column, change its **Category** too.
 

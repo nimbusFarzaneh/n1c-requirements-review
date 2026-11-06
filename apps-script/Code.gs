@@ -10,6 +10,7 @@
  *   Reviews       - written by the board: each reviewer's current position on each card
  *   Log           - written by the board: every change, append-only
  *   Suggestions   - written by the board: missing requirements; you fill in Decision
+ *   Suggestion comments - written by the board: reviewers' comments on suggestions
  *   Summary       - built on demand from the "Review board" menu
  */
 
@@ -18,7 +19,8 @@ var TABS = {
   Reviewers: ['Name', 'Code', 'Active', 'Role'],
   Reviews: ['Reviewer', 'ID', 'Status', 'Suggested category', 'Comment', 'Updated'],
   Log: ['Timestamp', 'Reviewer', 'ID', 'Status', 'Suggested category', 'Comment'],
-  Suggestions: ['Timestamp', 'Reviewer', 'Requirement', 'Workflow', 'Actor', 'Suggested category', 'Why', 'Decision', 'Decision note']
+  Suggestions: ['Timestamp', 'Reviewer', 'Requirement', 'Workflow', 'Actor', 'Suggested category', 'Why', 'Decision', 'Decision note'],
+  'Suggestion comments': ['Timestamp', 'Suggestion', 'Reviewer', 'Comment']
 };
 var STATUSES = ['approved', 'moved', 'commented', 'view', 'cleared'];
 var CATEGORIES = ['MVP', 'Later', 'Out of Scope', 'Needs N1C Decision'];
@@ -75,6 +77,9 @@ function doPost(e) {
     }
     if (body.action === 'review') return json(saveReview(reviewer, body));
     if (body.action === 'suggest') return json(saveSuggestion(reviewer, body));
+    if (body.action === 'editSuggestion') return json(editSuggestion(reviewer, body, false));
+    if (body.action === 'withdrawSuggestion') return json(editSuggestion(reviewer, body, true));
+    if (body.action === 'commentSuggestion') return json(commentSuggestion(reviewer, body));
     return json({ ok: false, error: 'unknown_action' });
   } catch (err) {
     return json({ ok: false, error: String(err && err.message || err) });
@@ -88,7 +93,12 @@ function json(obj) {
 // ---------- helpers ----------
 
 function table(name) {
-  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  var ss = SpreadsheetApp.getActiveSpreadsheet(), sh = ss.getSheetByName(name);
+  if (!sh && name === 'Suggestion comments') {
+    sh = ss.insertSheet(name);
+    sh.getRange(1, 1, 1, TABS[name].length).setValues([TABS[name]]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
   if (!sh) throw new Error('Missing tab: ' + name + '. Run Review board > Set up tabs.');
   var values = sh.getDataRange().getValues();
   var head = (values.shift() || []).map(function (h) { return String(h).trim(); });
@@ -167,9 +177,16 @@ function loadState(reviewer, isOwner) {
     if (status === 'view' && !owners[who]) (views[id] = views[id] || []).push({ reviewer: who, view: entry.to, comment: entry.comment });
   });
 
+  var C = table('Suggestion comments'), comments = {};
+  C.rows.forEach(function (r) {
+    var k = text(C.get(r, 'Suggestion')); if (!k || !text(C.get(r, 'Comment'))) return;
+    (comments[k] = comments[k] || []).push({ reviewer: text(C.get(r, 'Reviewer')), comment: text(C.get(r, 'Comment')) });
+  });
   var G = table('Suggestions');
   var suggestions = G.rows.filter(function (r) { return text(G.get(r, 'Requirement')); }).map(function (r) {
+    var key = suggestionKey(G.get(r, 'Timestamp'));
     return {
+      key: key, comments: comments[key] || [],
       reviewer: text(G.get(r, 'Reviewer')), requirement: text(G.get(r, 'Requirement')), workflow: text(G.get(r, 'Workflow')),
       actor: text(G.get(r, 'Actor')), category: text(G.get(r, 'Suggested category')), why: text(G.get(r, 'Why')),
       // "Decision" columns; older sheets may still call them "Triage".
@@ -224,7 +241,50 @@ function saveSuggestion(reviewer, b) {
   var req = String(b.requirement || '').trim();
   if (!req) return { ok: false, error: 'missing_requirement' };
   var cat = CATEGORIES.indexOf(String(b.category || '')) >= 0 ? b.category : '';
-  table('Suggestions').sheet.appendRow([new Date(), safe(reviewer), safe(req), safe(b.workflow), safe(b.actor), cat, safe(b.why), '', '']);
+  var now = new Date();
+  table('Suggestions').sheet.appendRow([now, safe(reviewer), safe(req), safe(b.workflow), safe(b.actor), cat, safe(b.why), '', '']);
+  return { ok: true, key: suggestionKey(now) };
+}
+
+/** A suggestion is identified by when it was made (to the second). */
+function suggestionKey(v) {
+  return v instanceof Date ? String(Math.round(v.getTime() / 1000)) : '';
+}
+
+/** Lets a reviewer change or withdraw their own suggestion, until it has a decision. */
+function editSuggestion(reviewer, b, withdraw) {
+  var key = String(b.key || '');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var G = table('Suggestions'), at = -1;
+    for (var i = 0; i < G.rows.length; i++) {
+      if (suggestionKey(G.get(G.rows[i], 'Timestamp')) === key && text(G.get(G.rows[i], 'Reviewer')) === reviewer) { at = i; break; }
+    }
+    if (at < 0) return { ok: false, error: 'not_found' };
+    if (text(G.get(G.rows[at], 'Decision') || G.get(G.rows[at], 'Triage'))) return { ok: false, error: 'already_decided' };
+    var log = table('Log').sheet;
+    if (withdraw) {
+      log.appendRow([new Date(), safe(reviewer), '', 'suggestion withdrawn', '', safe(G.get(G.rows[at], 'Requirement'))]);
+      G.sheet.deleteRow(at + 2);
+      return { ok: true };
+    }
+    var req = String(b.requirement || '').trim();
+    if (!req) return { ok: false, error: 'missing_requirement' };
+    var cat = CATEGORIES.indexOf(String(b.category || '')) >= 0 ? b.category : '';
+    var c0 = G.col('Requirement') + 1;   // Requirement, Workflow, Actor, Suggested category, Why are next to each other
+    G.sheet.getRange(at + 2, c0, 1, 5).setValues([[safe(req), safe(b.workflow), safe(b.actor), cat, safe(b.why)]]);
+    log.appendRow([new Date(), safe(reviewer), '', 'suggestion edited', cat, safe(req)]);
+    return { ok: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function commentSuggestion(reviewer, b) {
+  var key = String(b.key || ''), comment = String(b.comment || '').trim();
+  if (!key || !comment) return { ok: false, error: 'missing_comment' };
+  table('Suggestion comments').sheet.appendRow([new Date(), "'" + key, safe(reviewer), safe(comment)]);
   return { ok: true };
 }
 
