@@ -105,7 +105,13 @@ dialog{border:0;border-radius:14px;padding:0;width:min(520px,calc(100vw - 32px))
 dialog::backdrop{background:rgba(20,20,19,.45)}
 .dlg{padding:24px;display:flex;flex-direction:column;gap:14px}
 .dlg h2{margin:0;font-size:18px;font-weight:600;line-height:1.35}
-.dlg label{font-size:14px;font-weight:500;display:flex;flex-direction:column;gap:6px}
+.dlg label{font-size:14px;font-weight:500;display:block}
+.dlg label>textarea,.dlg label>input,.dlg label>select{display:block;width:100%;margin-top:6px}
+.dlg fieldset{border:0;margin:0;padding:0;min-width:0}
+.dlg legend{font-size:14px;font-weight:500;padding:0;margin-bottom:8px}
+.actor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:2px 12px}
+.dlg label.chk{font-weight:400;font-size:13px;display:flex;align-items:flex-start;gap:8px;padding:6px 0;cursor:pointer}
+.dlg label.chk input{width:16px;height:16px;margin:2px 0 0;flex:none}
 .dlg label .opt{font-weight:400;color:var(--muted)}
 .dlg textarea,.dlg input,.dlg select{font-size:14px;padding:10px 12px;border:1px solid #B9B8B1;border-radius:8px;background:#fff;font-weight:400}
 .dlg textarea{resize:vertical;min-height:96px;line-height:1.5}
@@ -185,7 +191,7 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=2"></script>
-<script src="app.js?v=2"></script>
+<script src="config.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

@@ -282,7 +282,7 @@
     $('suggList').innerHTML = list.map(function (s) {
       return '<article class="scard"><p class="title">' + esc(s.requirement) + '</p>' +
         '<p class="why">' + esc([s.workflow, s.actor].filter(Boolean).join(' · ')) + (s.workflow || s.actor ? ' · ' : '') +
-        'Suggested for ' + esc(s.category || 'unspecified') + ' by ' + esc(s.reviewer === S.reviewer ? 'you' : s.reviewer) + '</p>' +
+        (s.category ? 'Suggested for ' + esc(s.category) + ' by ' : 'Suggested by ') + esc(s.reviewer === S.reviewer ? 'you' : s.reviewer) + '</p>' +
         (s.why ? '<p class="why">Why: ' + esc(s.why) + '</p>' : '') +
         '<p class="tri">' + (s.triage ? esc(s.triage) + (s.note ? ': ' + esc(s.note) : '') : 'Awaiting triage') + '</p></article>';
     }).join('');
@@ -313,7 +313,7 @@
     openDialog(
       '<h2>' + esc(r.requirement) + '</h2>' +
       '<div class="fromto"><span>' + esc(r.category) + '</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg><span style="background:var(--blue-t);color:var(--blue-d)">' + esc(to) + '</span></div>' +
-      '<label>Why should it move? <span class="opt">Required</span><textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Move card'),
+      '<label>Why should it move? <span class="opt">(required)</span><textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Move card'),
       function () {
         var c = form.c.value.trim();
         if (!c) { showErr('Add a short reason so we know why it should move.'); return false; }
@@ -325,7 +325,7 @@
     var r = byId(id), m = mine(r), moved = m && m.status === 'moved';
     openDialog(
       '<h2>' + esc(r.requirement) + '</h2>' +
-      '<label>' + (moved ? 'Why should it move? <span class="opt">Required</span>' : 'Your comment <span class="opt">Optional. The card stays where it is.</span>') +
+      '<label>' + (moved ? 'Why should it move? <span class="opt">(required)</span>' : 'Your comment <span class="opt">(optional; the card stays where it is)</span>') +
       '<textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Save'),
       function () {
         var c = form.c.value.trim();
@@ -346,7 +346,7 @@
     var r = byId(id), m = mine(r);
     openDialog(
       '<h2>' + esc(r.requirement) + '</h2>' +
-      '<label>Your note for the discussion <span class="opt">Other reviewers can see this.</span><textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Save note'),
+      '<label>Your note for the discussion <span class="opt">(optional; other reviewers can see it)</span><textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Save note'),
       function () {
         var c = form.c.value.trim();
         if (!c && !(m && m.to)) { if (m) setMine(id, null); return; }
@@ -355,19 +355,30 @@
   }
 
   function openSuggest() {
-    var wfs = {}; S.reqs.forEach(function (r) { if (r.workflow) wfs[r.workflow] = 1; });
-    var acs = {}; S.reqs.forEach(function (r) { if (r.actor) acs[r.actor] = 1; });
+    var wfs = {}, acs = {};
+    S.reqs.forEach(function (r) {
+      if (r.workflow) wfs[r.workflow] = 1;
+      String(r.actor || '').split(';').forEach(function (a) { a = a.trim(); if (a) acs[a] = 1; });
+    });
+    var actors = Object.keys(acs).sort(function (a, b) { return a.localeCompare(b); });
     openDialog(
       '<h2>Suggest a missing requirement</h2>' +
-      '<p class="small">All reviewers can see suggestions. They’re triaged after the review rather than added to the board straight away.</p>' +
-      '<label>What’s needed? <span class="opt">Required</span><textarea name="req" maxlength="1000" style="min-height:72px"></textarea></label>' +
-      '<label>Workflow<input name="wf" list="wfList" maxlength="120"></label><datalist id="wfList">' + Object.keys(wfs).sort().map(function (w) { return '<option value="' + esc(w) + '">'; }).join('') + '</datalist>' +
-      '<label>Who needs it?<input name="actor" list="acList" maxlength="120"></label><datalist id="acList">' + Object.keys(acs).sort().map(function (w) { return '<option value="' + esc(w) + '">'; }).join('') + '</datalist>' +
-      '<label>Where do you think it belongs?<select name="cat">' + CATS.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
-      '<label>Why is it needed? <span class="opt">Required</span><textarea name="why" maxlength="2000" style="min-height:72px"></textarea></label>' + acts('Submit suggestion'),
+      '<p class="small">All reviewers can see suggestions. They\u2019re triaged after the review rather than added to the board straight away.</p>' +
+      '<label>What\u2019s needed? <span class="opt">(required)</span><textarea name="req" maxlength="1000" style="min-height:72px"></textarea></label>' +
+      '<label>Why is it needed? <span class="opt">(required)</span><textarea name="why" maxlength="2000" style="min-height:72px"></textarea></label>' +
+      '<label>Workflow <span class="opt">(optional)</span><select name="wf"><option value="">Not sure</option>' +
+        Object.keys(wfs).sort().map(function (w) { return '<option>' + esc(w) + '</option>'; }).join('') + '</select></label>' +
+      '<fieldset class="actors"><legend>Who needs it? <span class="opt">(optional, pick any)</span></legend><div class="actor-grid">' +
+        actors.map(function (a) { return '<label class="chk"><input type="checkbox" name="actor" value="' + esc(a) + '"> ' + esc(a) + '</label>'; }).join('') +
+      '</div><label style="margin-top:8px">Someone else <span class="opt">(optional)</span><input name="actorOther" maxlength="120"></label></fieldset>' +
+      '<label>Where do you think it belongs? <span class="opt">(optional)</span><select name="cat"><option value="">Not sure</option>' +
+        CATS.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
+      acts('Submit suggestion'),
       function () {
-        var s = { requirement: form.req.value.trim(), workflow: form.wf.value.trim(), actor: form.actor.value.trim(), category: form.cat.value, why: form.why.value.trim() };
-        if (!s.requirement || !s.why) { showErr('Please describe what’s needed and why.'); return false; }
+        var picked = Array.prototype.filter.call(form.querySelectorAll('input[name="actor"]'), function (x) { return x.checked; }).map(function (x) { return x.value; });
+        var other = form.actorOther.value.trim(); if (other) picked.push(other);
+        var s = { requirement: form.req.value.trim(), workflow: form.wf.value, actor: picked.join('; '), category: form.cat.value, why: form.why.value.trim() };
+        if (!s.requirement || !s.why) { showErr('Please describe what\u2019s needed and why.'); return false; }
         S.suggestions.push(Object.assign({ reviewer: S.reviewer, triage: '', note: '' }, s));
         renderSuggestions();
         save(Object.assign({ action: 'suggest' }, s));
