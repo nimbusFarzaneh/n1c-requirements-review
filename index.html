@@ -45,9 +45,9 @@ h1{margin:0;font-size:28px;font-weight:600;line-height:1.2}
 .chip.add{border-color:var(--blue);color:var(--blue);font-weight:500}
 .tb-r{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
 .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;align-items:start}
-.colm{background:var(--col);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;border-top:4px solid var(--c);min-height:200px;transition:background .15s,box-shadow .15s}
+.colm{background:var(--col);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:200px;transition:background .15s,box-shadow .15s}
 .colm.over{background:#E4E9F7;box-shadow:inset 0 0 0 2px var(--blue)}
-.colm-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:2px 4px}
+.colm-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:16px 16px 10px;margin:-12px -12px 0;border-radius:12px 12px 0 0;position:sticky;top:0;z-index:3;background:var(--col);box-shadow:inset 0 4px 0 var(--c),0 6px 8px -8px rgba(0,0,0,.25)}
 .colm-h h2{margin:0;font-size:15px;font-weight:600}
 .colm-h span{font-size:12px;color:var(--muted);text-align:right}
 .blurb{margin:-6px 4px 0;font-size:12px;color:var(--muted)}
@@ -138,7 +138,35 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 .login-card input{font-size:15px;padding:12px;border:1px solid #B9B8B1;border-radius:8px}
 .login-card .err{margin:0;font-size:13px;color:var(--red)}
 .loading{padding:48px;text-align:center;color:var(--muted)}
-@media (max-width:640px){.wrap{padding:20px 14px 64px}h1{font-size:23px}.top-r{align-items:flex-start}.pills{justify-content:flex-start}.tb-r{margin-left:0}}
+.coltabs{display:none}
+.intro .mb{display:none}
+@media (max-width:640px){
+.wrap{padding:16px 14px 64px;gap:14px}
+h1{font-size:20px}
+.intro{font-size:14px}
+.intro .dt{display:none}
+.intro .mb{display:inline}
+.top{gap:10px}
+.top-r{align-items:stretch;flex:1 1 100%;gap:8px}
+.pills{justify-content:flex-start}
+.prog{width:100%}
+.toolbar{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.toolbar::-webkit-scrollbar{display:none}
+.toolbar>*{flex:none}
+#filters{flex-wrap:nowrap}
+.toolbar .lbl{display:none}
+.tb-r{margin-left:0;flex-wrap:nowrap}
+.coltabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
+.coltab{font-size:12px;line-height:1.25;min-height:52px;padding:4px;border-radius:8px;border:1px solid var(--line);border-top:3px solid var(--c);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.coltab b{font-weight:600}
+.coltab span{color:var(--muted);font-size:11px}
+.coltab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);border-top-color:var(--c);color:#fff}
+.coltab[aria-selected="true"] span{color:#D3D1C7}
+.board .colm{display:none}
+.colm-h{position:static;box-shadow:inset 0 4px 0 var(--c)}
+.board .colm.on{display:flex}
+.foot .movesel{flex:1 1 140px;max-width:none}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -162,7 +190,7 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 <div class="top-l">
 <p class="eyebrow" id="eyebrow">Requirements review</p>
 <h1>Do you agree with where each requirement sits?</h1>
-<p class="intro">Approve a card if it's in the right place and it moves to the approved pile. If you disagree, drag it to another column (or use "Move to") and tell us why. You can comment on any card. Items needing an N1C decision are settled together, so just add your view. Your changes save automatically.</p>
+<p class="intro">Approve a card if it's in the right place and it moves to the approved pile. If you disagree, <span class="dt">drag it to another column (or use "Move to")</span><span class="mb">use "Move to"</span> and tell us why. You can comment on any card. Items needing an N1C decision are settled together, so just add your view. Your changes save automatically.</p>
 </div>
 <div class="top-r">
 <div class="pills">
@@ -190,6 +218,7 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 <button type="button" class="chip add" id="suggestBtn">+ Suggest a missing requirement</button></span>
 </div>
 
+<div id="coltabs" class="coltabs" role="tablist" aria-label="Columns"></div>
 <div id="board" class="board"><p class="loading">Loading…</p></div>
 
 <section class="sugg" aria-labelledby="suggH">
@@ -203,7 +232,7 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="config.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body>
 </html>

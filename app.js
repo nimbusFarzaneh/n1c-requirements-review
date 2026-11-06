@@ -26,7 +26,7 @@
     code: null, reviewer: '', isOwner: false, reviewerCount: 3,
     reqs: [], mine: {}, views: {}, suggestions: [],
     filter: 'open', workflow: '',
-    pileOpen: {}, groupShow: {}, viewsOpen: {}
+    pileOpen: {}, groupShow: {}, viewsOpen: {}, mobileCol: 'MVP'
   };
 
   // ---------- helpers ----------
@@ -168,6 +168,7 @@
   }
 
   function renderBoard() {
+    var tabs = [];
     var html = COLS.map(function (col) {
       var all = S.reqs.filter(function (r) { return eff(r) === col.key; });
       var decided = all.filter(isDecided);
@@ -178,7 +179,8 @@
       var shown = (S.filter === 'approved' || S.filter === 'commented' ? live : open).filter(passFilter);
       var isN = col.key === N1C;
 
-      var h = '<section class="colm" data-col="' + esc(col.key) + '" style="--c:' + col.color + '" aria-label="' + esc(col.key) + '">';
+      tabs.push('<button type="button" class="coltab" role="tab" data-act="coltab" data-col="' + esc(col.key) + '" style="--c:' + col.color + '" aria-selected="' + (S.mobileCol === col.key) + '"><b>' + esc(col.key === N1C ? 'N1C decision' : col.key) + '</b><span>' + (isN ? open.length + ' open' : left + ' left') + '</span></button>');
+      var h = '<section class="colm' + (S.mobileCol === col.key ? ' on' : '') + '" data-col="' + esc(col.key) + '" style="--c:' + col.color + '" aria-label="' + esc(col.key) + '">';
       h += '<div class="colm-h"><h2>' + esc(col.key) + '</h2><span>' +
         (isN ? open.length + ' open · ' + all.length + ' total' : left + ' to review · ' + live.length + ' total') + '</span></div>';
       h += '<p class="blurb">' + esc(col.blurb) + '</p>';
@@ -225,6 +227,7 @@
       return h;
     }).join('');
     $('board').innerHTML = html;
+    $('coltabs').innerHTML = tabs.join('');
   }
 
   function card(r, grouped) {
@@ -436,6 +439,7 @@
     else if (act === 'pile') { var c = t.getAttribute('data-col'); S.pileOpen[c] = !S.pileOpen[c]; renderBoard(); }
     else if (act === 'filter') { S.filter = t.getAttribute('data-f'); renderFilters(); renderBoard(); }
     else if (act === 'retry') retry();
+    else if (act === 'coltab') { S.mobileCol = t.getAttribute('data-col'); renderBoard(); var y = $('board').getBoundingClientRect().top + window.scrollY - $('coltabs').offsetHeight - 8; if (window.scrollY > y) window.scrollTo(0, y); }
   });
   document.addEventListener('change', function (e) {
     var t = e.target;
