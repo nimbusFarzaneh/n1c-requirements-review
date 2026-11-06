@@ -157,12 +157,6 @@
     $('filters').innerHTML = FILTERS.map(function (f) {
       return '<button type="button" class="chip" data-act="filter" data-f="' + f.key + '" aria-pressed="' + (S.filter === f.key) + '">' + esc(f.label) + ' (' + counts[f.key] + ')</button>';
     }).join('');
-    var wfs = {};
-    S.reqs.forEach(function (r) { wfs[r.workflow || 'Other'] = 1; });
-    var list = Object.keys(wfs).sort();
-    $('wfSel').innerHTML = '<option value="">Workflow: All</option>' + list.map(function (w) {
-      return '<option value="' + esc(w) + '"' + (S.workflow === w ? ' selected' : '') + '>' + esc(w) + '</option>';
-    }).join('');
   }
 
   function passFilter(r) {
@@ -511,7 +505,6 @@
   document.addEventListener('change', function (e) {
     var t = e.target;
     if (t.matches('select[data-act="move"]') && t.value) requestMove(t.getAttribute('data-id'), t.value);
-    if (t.id === 'wfSel') { S.workflow = t.value; renderBoard(); }
   });
   $('suggestBtn').addEventListener('click', function () { openSuggest(); });
   function toggleSugg(open) {
