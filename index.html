@@ -145,6 +145,8 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 .fromto span{border-radius:6px;padding:3px 8px;background:#F1F0EC}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:var(--ink);color:#fff;border-radius:10px;padding:8px 8px 8px 16px;font-size:13px;max-width:min(520px,calc(100vw - 32px));box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:10}
 .toast button{font-size:13px;font-weight:500;min-height:36px;padding:0 12px;border-radius:6px;border:1px solid #5F5E58;background:transparent;color:#fff}
+.brand{display:inline-flex;align-items:center;gap:10px;align-self:flex-start;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 16px 5px 5px;margin:0 0 6px;font-size:13px;font-weight:500;color:var(--ink2);letter-spacing:.01em;box-shadow:0 1px 2px rgba(20,20,19,.04)}
+.brand img{width:40px;height:40px;flex:none;display:block}
 .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .login-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:40px 36px 32px;width:min(420px,100%);display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;box-shadow:0 1px 2px rgba(20,20,19,.04),0 12px 32px -12px rgba(20,20,19,.12)}
 .login-logo{display:block;width:104px;height:104px;margin:0 0 20px}
@@ -212,7 +214,7 @@ h1{font-size:20px}
 <div class="wrap">
 <header class="top">
 <div class="top-l">
-<p class="eyebrow brand"><img src="logo.png" width="52" height="52" alt="N=1 Collaborative"><span id="eyebrow">Requirements review</span></p>
+<p class="eyebrow brand"><img src="logo.png" width="40" height="40" alt="N=1 Collaborative"><span id="eyebrow">Requirements review</span></p>
 <h1>Do you agree with where each requirement sits?</h1>
 <p class="intro">Approve a card if it's in the right place and it moves to the approved pile. If you disagree, <span class="dt">drag it to another column (or use "Move to")</span><span class="mb">use "Move to"</span> and tell us why. You can comment on any card. Items needing an N1C decision are settled together, so just add your view. Your changes save automatically.</p>
 </div>
@@ -262,7 +264,7 @@ h1{font-size:20px}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=24"></script>
-<script src="app.js?v=24"></script>
+<script src="config.js?v=25"></script>
+<script src="app.js?v=25"></script>
 </body>
 </html>
