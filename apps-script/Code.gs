@@ -15,7 +15,7 @@
 
 var TABS = {
   Requirements: ['ID', 'Requirement', 'Workflow', 'Actor', 'Category', 'Reason', 'Also involves', 'Open question', 'Decision'],
-  Reviewers: ['Name', 'Code', 'Active'],
+  Reviewers: ['Name', 'Code', 'Active', 'Role'],
   Reviews: ['Reviewer', 'ID', 'Status', 'Suggested category', 'Comment', 'Updated'],
   Log: ['Timestamp', 'Reviewer', 'ID', 'Status', 'Suggested category', 'Comment'],
   Suggestions: ['Timestamp', 'Reviewer', 'Requirement', 'Workflow', 'Actor', 'Suggested category', 'Why', 'Triage', 'Triage note']
@@ -61,9 +61,10 @@ function doGet() {
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents || '{}');
-    var reviewer = authenticate(body.code);
-    if (!reviewer) return json({ ok: false, error: 'invalid_code' });
-    if (body.action === 'load') return json(loadState(reviewer));
+    var who = authenticate(body.code);
+    if (!who) return json({ ok: false, error: 'invalid_code' });
+    var reviewer = who.name;
+    if (body.action === 'load') return json(loadState(reviewer, who.owner));
     if (body.action === 'review') return json(saveReview(reviewer, body));
     if (body.action === 'suggest') return json(saveSuggestion(reviewer, body));
     return json({ ok: false, error: 'unknown_action' });
@@ -106,14 +107,27 @@ function activeReviewers() {
   return t.rows.filter(function (r) {
     var active = String(t.get(r, 'Active')).trim().toUpperCase();   // blank or anything except FALSE/NO = active
     return text(t.get(r, 'Name')) && text(t.get(r, 'Code')) && active !== 'FALSE' && active !== 'NO';
-  }).map(function (r) { return { name: text(t.get(r, 'Name')), code: text(t.get(r, 'Code')) }; });
+  }).map(function (r) {
+    // Role "Owner" can sign in (e.g. to test or watch progress) but is not counted as a reviewer.
+    return { name: text(t.get(r, 'Name')), code: text(t.get(r, 'Code')), owner: text(t.get(r, 'Role')).toLowerCase() === 'owner' };
+  });
+}
+
+function reviewerNames() {
+  return activeReviewers().filter(function (r) { return !r.owner; }).map(function (r) { return r.name; });
+}
+
+function ownerNames() {
+  var o = {};
+  activeReviewers().forEach(function (r) { if (r.owner) o[r.name] = 1; });
+  return o;
 }
 
 function authenticate(code) {
   code = String(code || '').trim();
   if (!code) return null;
   var list = activeReviewers();
-  for (var i = 0; i < list.length; i++) if (list[i].code === code) return list[i].name;
+  for (var i = 0; i < list.length; i++) if (list[i].code === code) return list[i];
   return null;
 }
 
@@ -125,7 +139,7 @@ function requirementIds() {
 
 // ---------- actions ----------
 
-function loadState(reviewer) {
+function loadState(reviewer, isOwner) {
   var R = table('Requirements');
   var requirements = R.rows.filter(function (r) { return text(R.get(r, 'ID')) && text(R.get(r, 'Requirement')); }).map(function (r) {
     return {
@@ -135,14 +149,14 @@ function loadState(reviewer) {
     };
   });
 
-  var V = table('Reviews'), mine = {}, views = {};
+  var V = table('Reviews'), mine = {}, views = {}, owners = ownerNames();
   V.rows.forEach(function (r) {
     var who = text(V.get(r, 'Reviewer')), id = text(V.get(r, 'ID')), status = text(V.get(r, 'Status'));
     if (!who || !id || !status) return;
     var entry = { status: status, to: text(V.get(r, 'Suggested category')), comment: text(V.get(r, 'Comment')) };
     if (who === reviewer) mine[id] = entry;
     // Only views on "Needs N1C Decision" items are shared between reviewers.
-    if (status === 'view') (views[id] = views[id] || []).push({ reviewer: who, view: entry.to, comment: entry.comment });
+    if (status === 'view' && !owners[who]) (views[id] = views[id] || []).push({ reviewer: who, view: entry.to, comment: entry.comment });
   });
 
   var G = table('Suggestions');
@@ -154,7 +168,7 @@ function loadState(reviewer) {
     };
   });
 
-  return { ok: true, reviewer: reviewer, reviewerCount: activeReviewers().length, requirements: requirements, mine: mine, views: views, suggestions: suggestions };
+  return { ok: true, reviewer: reviewer, isOwner: !!isOwner, reviewerCount: reviewerNames().length, requirements: requirements, mine: mine, views: views, suggestions: suggestions };
 }
 
 function saveReview(reviewer, b) {
@@ -204,7 +218,7 @@ function saveSuggestion(reviewer, b) {
 function refreshSummary() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var R = table('Requirements'), V = table('Reviews');
-  var reviewers = activeReviewers().map(function (r) { return r.name; });
+  var reviewers = reviewerNames();
   var byKey = {};
   V.rows.forEach(function (r) {
     byKey[text(V.get(r, 'Reviewer')) + '|' + text(V.get(r, 'ID'))] = {

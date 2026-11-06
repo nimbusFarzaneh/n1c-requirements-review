@@ -42,10 +42,11 @@ One row per requirement:
 
 ### 3. Fill in the Reviewers tab
 
-One row per reviewer: **Name**, **Code**, **Active**.
+One row per reviewer: **Name**, **Code**, **Active**, **Role**.
 
 - Give each reviewer their own code (e.g. a random word plus numbers). Codes are only stored in your sheet.
 - Leave **Active** empty to allow access. Type `FALSE` or `No` to switch a reviewer off.
+- Leave **Role** empty for reviewers. Type `Owner` for yourself: you can sign in to test or watch progress, but you're not counted as a reviewer, your N1C views aren't shown to others, and you're left out of the Summary.
 
 ### 4. Deploy the script as a web app
 

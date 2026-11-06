@@ -22,7 +22,7 @@
 
   var S = {
     demo: !CFG.scriptUrl,
-    code: null, reviewer: '', reviewerCount: 3,
+    code: null, reviewer: '', isOwner: false, reviewerCount: 3,
     reqs: [], mine: {}, views: {}, suggestions: [],
     filter: 'open', workflow: '',
     pileOpen: {}, groupShow: {}, viewsOpen: {}
@@ -256,7 +256,7 @@
   function n1cBlock(r) {
     var m = mine(r), myView = m && m.status === 'view' ? m.to : '';
     var others = (S.views[r.id] || []).filter(function (v) { return v.reviewer !== S.reviewer; });
-    var weighed = others.length + (m ? 1 : 0);
+    var weighed = others.length + (m && !S.isOwner ? 1 : 0);
     var open = !!S.viewsOpen[r.id];
     var h = '<div class="views"><p class="views-h">Your view before the discussion</p><div class="vchips">';
     ['MVP', 'Later', 'Out of Scope'].forEach(function (c) {
@@ -456,6 +456,7 @@
   // ---------- data load / sign in ----------
   function apply(data) {
     S.reviewer = data.reviewer || '';
+    S.isOwner = !!data.isOwner;
     S.reviewerCount = data.reviewerCount || 3;
     S.reqs = (data.requirements || []).map(function (r) {
       return {
@@ -471,7 +472,7 @@
     });
     S.views = data.views || {};
     S.suggestions = data.suggestions || [];
-    $('who').textContent = 'Reviewer: ' + S.reviewer;
+    $('who').textContent = (S.isOwner ? 'Owner (not counted): ' : 'Reviewer: ') + S.reviewer;
   }
 
   function refresh() {
