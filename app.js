@@ -308,10 +308,15 @@
     return '<p class="err" role="alert" hidden></p><div class="acts"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok">' + esc(label) + '</button></div>';
   }
 
+  function reqHead(r) {
+    return '<p class="small">' + esc([r.id, r.workflow].filter(Boolean).join(' \u00b7 ')) + '</p>' +
+      '<h2 class="reqh">' + esc(r.requirement) + '</h2>';
+  }
+
   function openMove(id, to) {
     var r = byId(id), m = mine(r);
     openDialog(
-      '<h2>' + esc(r.requirement) + '</h2>' +
+      reqHead(r) +
       '<div class="fromto"><span>' + esc(r.category) + '</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg><span style="background:var(--blue-t);color:var(--blue-d)">' + esc(to) + '</span></div>' +
       '<label>Why should it move? <span class="opt">(required)</span><textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Move card'),
       function () {
@@ -324,7 +329,7 @@
   function openComment(id) {
     var r = byId(id), m = mine(r), moved = m && m.status === 'moved';
     openDialog(
-      '<h2>' + esc(r.requirement) + '</h2>' +
+      reqHead(r) +
       '<label>' + (moved ? 'Why should it move? <span class="opt">(required)</span>' : 'Your comment <span class="opt">(optional; the card stays where it is)</span>') +
       '<textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Save'),
       function () {
@@ -345,7 +350,7 @@
   function openNote(id) {
     var r = byId(id), m = mine(r);
     openDialog(
-      '<h2>' + esc(r.requirement) + '</h2>' +
+      reqHead(r) +
       '<label>Your note for the discussion <span class="opt">(optional; other reviewers can see it)</span><textarea name="c" maxlength="2000">' + esc(m && m.comment || '') + '</textarea></label>' + acts('Save note'),
       function () {
         var c = form.c.value.trim();
