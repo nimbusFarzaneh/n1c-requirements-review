@@ -278,13 +278,25 @@
 
   function renderSuggestions() {
     var list = S.suggestions;
-    if (!list.length) { $('suggList').innerHTML = '<p class="small">No suggestions yet. If something is missing, use “Suggest a missing requirement”.</p>'; return; }
+    $('suggCount').textContent = list.length;
+    if (!list.length) { $('suggList').innerHTML = '<p class="small">No suggestions yet. If something is missing from the board, use \u201cSuggest a missing requirement\u201d.</p>'; return; }
     $('suggList').innerHTML = list.map(function (s) {
-      return '<article class="scard"><p class="title">' + esc(s.requirement) + '</p>' +
-        '<p class="why">' + esc([s.workflow, s.actor].filter(Boolean).join(' · ')) + (s.workflow || s.actor ? ' · ' : '') +
-        (s.category ? 'Suggested for ' + esc(s.category) + ' by ' : 'Suggested by ') + esc(s.reviewer === S.reviewer ? 'you' : s.reviewer) + '</p>' +
-        (s.why ? '<p class="why">Why: ' + esc(s.why) + '</p>' : '') +
-        '<p class="tri">' + (s.triage ? esc(s.triage) + (s.note ? ': ' + esc(s.note) : '') : 'Awaiting triage') + '</p></article>';
+      var who = s.reviewer === S.reviewer ? 'you' : s.reviewer;
+      var decided = !!s.triage;
+      var h = '<article class="scard">';
+      h += decided
+        ? '<span class="sstat done">Decision: ' + esc(s.triage) + '</span>'
+        : '<span class="sstat">Not decided yet</span>';
+      h += '<p class="title">' + esc(s.requirement) + '</p>';
+      h += '<dl class="sdl">';
+      h += '<dt>Suggested by</dt><dd>' + esc(who) + '</dd>';
+      h += '<dt>Belongs in</dt><dd>' + esc(s.category || 'Not sure') + '</dd>';
+      if (s.workflow) h += '<dt>Workflow</dt><dd>' + esc(s.workflow) + '</dd>';
+      if (s.actor) h += '<dt>Who needs it</dt><dd>' + esc(s.actor.split(';').map(function (x) { return x.trim(); }).filter(Boolean).join(', ')) + '</dd>';
+      if (s.why) h += '<dt>Why</dt><dd>' + esc(s.why) + '</dd>';
+      if (decided && s.note) h += '<dt>Note</dt><dd>' + esc(s.note) + '</dd>';
+      h += '</dl></article>';
+      return h;
     }).join('');
   }
 
@@ -368,7 +380,7 @@
     var actors = Object.keys(acs).sort(function (a, b) { return a.localeCompare(b); });
     openDialog(
       '<h2>Suggest a missing requirement</h2>' +
-      '<p class="small">All reviewers can see suggestions. They\u2019re triaged after the review rather than added to the board straight away.</p>' +
+      '<p class="small">Everyone reviewing can see suggestions. They aren\u2019t added to the board during the review; each one gets a decision afterwards.</p>' +
       '<label>What\u2019s needed? <span class="opt">(required)</span><textarea name="req" maxlength="1000" style="min-height:72px"></textarea></label>' +
       '<label>Why is it needed? <span class="opt">(required)</span><textarea name="why" maxlength="2000" style="min-height:72px"></textarea></label>' +
       '<label>Workflow <span class="opt">(optional)</span><select name="wf"><option value="">Not sure</option>' +
@@ -424,6 +436,8 @@
     if (t.id === 'wfSel') { S.workflow = t.value; renderBoard(); }
   });
   $('suggestBtn').addEventListener('click', openSuggest);
+  $('suggJump').addEventListener('click', function () { $('suggH').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('suggH').focus({ preventScroll: true }); });
+  $('suggTop').addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
   $('refreshBtn').addEventListener('click', function () { refresh(); });
   $('logoutBtn').addEventListener('click', function () {
     if (S.code && !S.demo) api({ action: 'signout', code: S.code }).catch(function () {});

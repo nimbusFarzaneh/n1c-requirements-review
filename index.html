@@ -42,7 +42,8 @@ h1{margin:0;font-size:28px;font-weight:600;line-height:1.2}
 .chip{font-size:13px;padding:8px 14px;min-height:36px;border-radius:999px;border:1px solid var(--line);background:#fff}
 .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
 .sel{font-size:13px;padding:8px 12px;min-height:36px;border-radius:999px;border:1px solid var(--line);background:#fff}
-.chip.add{border-color:var(--blue);color:var(--blue);font-weight:500;margin-left:auto}
+.chip.add{border-color:var(--blue);color:var(--blue);font-weight:500}
+.tb-r{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
 .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;align-items:start}
 .colm{background:var(--col);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;border-top:4px solid var(--c);min-height:200px;transition:background .15s,box-shadow .15s}
 .colm.over{background:#E4E9F7;box-shadow:inset 0 0 0 2px var(--blue)}
@@ -98,9 +99,15 @@ h1{margin:0;font-size:28px;font-weight:600;line-height:1.2}
 .sugg-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 .sugg-h h2{margin:0;font-size:18px;font-weight:600}
 .sugg-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.scard{border:1px dashed #B9B8B1;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;background:#fff}
+.scard{border:1px dashed #B9B8B1;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;background:#fff}
 .scard p{margin:0}
-.tri{font-size:12px;font-weight:500;color:var(--purple-d)}
+.sstat{align-self:flex-start;font-size:12px;font-weight:500;border-radius:6px;padding:2px 8px;background:#F1F0EC;color:#3A3934}
+.sstat.done{background:var(--green-t);color:var(--green)}
+.sdl{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:13px;line-height:1.45}
+.sdl dt{color:var(--muted)}
+.sdl dd{margin:0;color:var(--ink)}
+.chip.jump{display:inline-flex;align-items:center;gap:6px}
+.chip.jump b{font-weight:600;background:#F1F0EC;border-radius:999px;padding:0 7px;font-size:12px}
 dialog{border:0;border-radius:14px;padding:0;width:min(520px,calc(100vw - 32px));box-shadow:0 20px 60px rgba(20,20,19,.25);color:var(--ink)}
 dialog::backdrop{background:rgba(20,20,19,.45)}
 .dlg{padding:24px;display:flex;flex-direction:column;gap:14px}
@@ -130,7 +137,7 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 .login-card input{font-size:15px;padding:12px;border:1px solid #B9B8B1;border-radius:8px}
 .login-card .err{margin:0;font-size:13px;color:var(--red)}
 .loading{padding:48px;text-align:center;color:var(--muted)}
-@media (max-width:640px){.wrap{padding:20px 14px 64px}h1{font-size:23px}.top-r{align-items:flex-start}.pills{justify-content:flex-start}.chip.add{margin-left:0}}
+@media (max-width:640px){.wrap{padding:20px 14px 64px}h1{font-size:23px}.top-r{align-items:flex-start}.pills{justify-content:flex-start}.tb-r{margin-left:0}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -178,13 +185,15 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 <span class="lbl">Show</span>
 <span id="filters" class="toolbar"></span>
 <select class="sel" id="wfSel" aria-label="Filter by workflow"></select>
-<button type="button" class="chip add" id="suggestBtn">+ Suggest a missing requirement</button>
+<span class="tb-r"><button type="button" class="chip jump" id="suggJump">View suggestions <b id="suggCount">0</b></button>
+<button type="button" class="chip add" id="suggestBtn">+ Suggest a missing requirement</button></span>
 </div>
 
 <div id="board" class="board"><p class="loading">Loading…</p></div>
 
 <section class="sugg" aria-labelledby="suggH">
-<div class="sugg-h"><h2 id="suggH">Suggested by reviewers</h2><p class="small">New items go here for triage. They aren't added to the board during the review.</p></div>
+<div class="sugg-h"><h2 id="suggH" tabindex="-1">Suggested by reviewers</h2><button type="button" class="linkbtn" id="suggTop">Back to top</button></div>
+<p class="small" style="margin-top:-6px">Requirements reviewers think are missing from the board. They aren't added during the review; each one gets a decision afterwards, shown here.</p>
 <div id="suggList" class="sugg-list"></div>
 </section>
 </div>
@@ -193,7 +202,7 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script src="config.js?v=9"></script>
+<script src="app.js?v=9"></script>
 </body>
 </html>

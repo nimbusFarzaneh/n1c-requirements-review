@@ -9,7 +9,7 @@
  *   Reviewers     - you maintain this (name + individual access code)
  *   Reviews       - written by the board: each reviewer's current position on each card
  *   Log           - written by the board: every change, append-only
- *   Suggestions   - written by the board: missing requirements; you fill in Triage
+ *   Suggestions   - written by the board: missing requirements; you fill in Decision
  *   Summary       - built on demand from the "Review board" menu
  */
 
@@ -18,7 +18,7 @@ var TABS = {
   Reviewers: ['Name', 'Code', 'Active', 'Role'],
   Reviews: ['Reviewer', 'ID', 'Status', 'Suggested category', 'Comment', 'Updated'],
   Log: ['Timestamp', 'Reviewer', 'ID', 'Status', 'Suggested category', 'Comment'],
-  Suggestions: ['Timestamp', 'Reviewer', 'Requirement', 'Workflow', 'Actor', 'Suggested category', 'Why', 'Triage', 'Triage note']
+  Suggestions: ['Timestamp', 'Reviewer', 'Requirement', 'Workflow', 'Actor', 'Suggested category', 'Why', 'Decision', 'Decision note']
 };
 var STATUSES = ['approved', 'moved', 'commented', 'view', 'cleared'];
 var CATEGORIES = ['MVP', 'Later', 'Out of Scope', 'Needs N1C Decision'];
@@ -172,7 +172,8 @@ function loadState(reviewer, isOwner) {
     return {
       reviewer: text(G.get(r, 'Reviewer')), requirement: text(G.get(r, 'Requirement')), workflow: text(G.get(r, 'Workflow')),
       actor: text(G.get(r, 'Actor')), category: text(G.get(r, 'Suggested category')), why: text(G.get(r, 'Why')),
-      triage: text(G.get(r, 'Triage')), note: text(G.get(r, 'Triage note'))
+      // "Decision" columns; older sheets may still call them "Triage".
+      triage: text(G.get(r, 'Decision') || G.get(r, 'Triage')), note: text(G.get(r, 'Decision note') || G.get(r, 'Triage note'))
     };
   });
 
