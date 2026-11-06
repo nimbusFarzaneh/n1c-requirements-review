@@ -26,7 +26,7 @@
     code: null, reviewer: '', isOwner: false, reviewerCount: 3,
     reqs: [], mine: {}, views: {}, suggestions: [],
     filter: 'open', workflow: '', q: '',
-    pileOpen: {}, groupShow: {}, viewsOpen: {}, mobileCol: 'MVP', seq: {}
+    pileOpen: {}, groupShow: {}, viewsOpen: {}, mobileCol: 'MVP', seq: {}, changes: 0
   };
 
   // ---------- helpers ----------
@@ -87,6 +87,7 @@
       failed = failed.filter(function (f) { return !(f.body.action === 'review' && f.body.id === body.id); });
       body.seq = (S.seq[body.id] = (S.seq[body.id] || 0) + 1);
     }
+    S.changes++;
     pending++; setSave('busy');
     var payload = Object.assign({ code: S.code }, body);
     queue = queue.then(function () { return api(payload); }).then(function (res) {
@@ -217,6 +218,9 @@
     var tabs = [], filtered = S.filter !== 'open' || !!S.q;
     var matches = {};
     COLS.forEach(function (c) { matches[c.key] = shownIn(c.key).length; });
+    // When searching, decided items count as matches too (they're listed in the Needs N1C Decision column).
+    var decidedHits = S.q && S.filter === 'open' ? S.reqs.filter(function (r) { return isDecided(r) && matchesSearch(r); }) : [];
+    matches[N1C] += decidedHits.length;
     var html = COLS.map(function (col) {
       var all = S.reqs.filter(function (r) { return eff(r) === col.key; });
       var decided = col.key === N1C ? S.reqs.filter(isDecided) : [];
@@ -234,7 +238,9 @@
       h += '<p class="blurb">' + esc(col.blurb) + '</p>';
       if (!isN) h += '<div class="dropzone">Drop here to move to ' + esc(col.key) + '</div>';
 
-      if (!shown.length) {
+      if (!shown.length && isN && decidedHits.length) {
+        // nothing open matches here, but decided items do: they're listed below
+      } else if (!shown.length) {
         var elsewhere = COLS.filter(function (c) { return c.key !== col.key && matches[c.key]; }).map(function (c) { return c.key + ' (' + matches[c.key] + ')'; });
         var msg = S.filter === 'agreed' && isN ? 'These are settled by discussion, so you give a view rather than agree.'
           : filtered ? 'None in this column.' + (elsewhere.length ? ' See ' + elsewhere.join(', ') + '.' : '')
@@ -278,13 +284,18 @@
             (m && m.comment ? '<p class="why">Your comment: ' + esc(m.comment) + '</p>' : '') + '</div>';
         });
       }
-      if (isN && decided.length && !filtered) {
-        var dk = 'decided', dpo = !!S.pileOpen[dk];
-        h += '<button type="button" class="pile dec" data-act="pile" data-col="' + dk + '" aria-expanded="' + dpo + '"><span>' + CHECK + decided.length + ' decided</span><b style="font-weight:500">' + (dpo ? 'Hide' : 'Show') + '</b></button>';
-        if (dpo) decided.forEach(function (r) {
-          h += '<div class="mini"><p>' + esc(r.requirement) + '</p><p class="why"><b style="font-weight:500;color:var(--ink)">Decided: ' + esc(r.decision) + '</b>' +
-            (r.decisionDate ? ' \u00b7 ' + esc(r.decisionDate) : '') + (r.decisionRationale ? '<br>' + esc(r.decisionRationale) : '') + '</p></div>';
-        });
+      var decidedRow = function (r) {
+        return '<div class="mini"><p>' + esc(r.requirement) + '</p><p class="why"><b style="font-weight:500;color:var(--ink)">' + esc(r.id) + ' \u00b7 Decided: ' + esc(r.decision) + '</b>' +
+          (r.decisionDate ? ' \u00b7 ' + esc(r.decisionDate) : '') + (r.decisionRationale ? '<br>' + esc(r.decisionRationale) : '') + '</p></div>';
+      };
+      if (isN && decidedHits.length) {
+        // Searching: list matching decided items directly.
+        h += '<p class="views-h" style="margin:6px 4px 0">Decided ' + (decidedHits.length === 1 ? 'item' : 'items') + ' matching your search</p>';
+        decidedHits.forEach(function (r) { h += decidedRow(r); });
+      } else if (isN && decided.length && !filtered) {
+        var dpo = !!S.pileOpen.decided;
+        h += '<button type="button" class="pile dec" data-act="pile" data-col="decided" aria-expanded="' + dpo + '"><span>' + CHECK + decided.length + ' decided</span><b style="font-weight:500">' + (dpo ? 'Hide' : 'Show') + '</b></button>';
+        if (dpo) decided.forEach(function (r) { h += decidedRow(r); });
       }
       h += '</section>';
       return h;
@@ -663,8 +674,10 @@
     if (failed.length) { toast('Some changes haven\u2019t saved yet. Click Retry first.'); return Promise.resolve(); }
     $('refreshBtn').textContent = 'Refreshing…';
     // Wait for any saves still in progress, so the reload includes them.
-    return queue.then(function () { return api({ action: 'load', code: S.code }); }).then(function (data) {
-      if (failed.length || pending) return;   // something changed while loading; keep what's on screen
+    var startedAt;
+    return queue.then(function () { startedAt = S.changes; return api({ action: 'load', code: S.code }); }).then(function (data) {
+      // If anything changed after this load started, its data is already out of date: keep what's on screen.
+      if (S.changes !== startedAt || failed.length || pending) return;
       apply(data); renderAll();
     })
       .catch(function () { toast('Couldn’t refresh. Check your connection and try again.'); })
