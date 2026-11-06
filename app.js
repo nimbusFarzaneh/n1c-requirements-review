@@ -574,7 +574,7 @@
     });
     S.views = data.views || {};
     S.suggestions = data.suggestions || [];
-    $('who').textContent = (S.isOwner ? 'Owner (not counted): ' : 'Reviewer: ') + S.reviewer;
+    $('who').innerHTML = 'Signed in as <b>' + esc(S.reviewer) + '</b>' + (S.isOwner ? ' (owner, not counted)' : '');
   }
 
   function refresh() {
@@ -663,7 +663,7 @@
   var label = (CFG.projectName ? CFG.projectName + ' · ' : '') + 'Requirements review';
   $('eyebrow').textContent = label; $('loginEyebrow').textContent = label;
   document.title = label;
-  if (CFG.deadline) { $('deadline').textContent = 'Please finish by ' + CFG.deadline; $('deadline').hidden = false; }
+  if (CFG.deadline) { $('deadline').textContent = 'Due ' + CFG.deadline.replace(/^the end of /, 'end of '); $('deadline').hidden = false; }
   if (S.demo) { $('demoNote').hidden = false; $('demoPill').hidden = false; }
   var saved = load(STORE_KEY);
   if (saved) signIn(saved); else $('login').hidden = false;
