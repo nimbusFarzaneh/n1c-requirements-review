@@ -41,9 +41,8 @@ h1{margin:0;font-size:28px;font-weight:600;line-height:1.2}
 .toolbar .lbl{font-size:13px;color:var(--muted);margin-right:4px}
 .chip{font-size:13px;padding:8px 14px;min-height:36px;border-radius:999px;border:1px solid var(--line);background:#fff}
 .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
-.sel{font-size:13px;padding:8px 12px;min-height:36px;border-radius:999px;border:1px solid var(--line);background:#fff}
+.sel{max-width:260px;font-size:13px;padding:8px 12px;min-height:36px;border-radius:999px;border:1px solid var(--line);background:#fff}
 .chip.add{border-color:var(--blue);color:var(--blue);font-weight:500}
-.tb-r{display:flex;flex-wrap:wrap;gap:8px;margin-left:auto}
 .board{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;align-items:start}
 .colm{background:var(--col);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;min-height:200px;transition:background .15s,box-shadow .15s}
 .colm.over{background:#E4E9F7;box-shadow:inset 0 0 0 2px var(--blue)}
@@ -115,12 +114,18 @@ h1{margin:0;font-size:28px;font-weight:600;line-height:1.2}
 .chip.jump[aria-expanded="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
 .chip.jump[aria-expanded="true"] b{background:#444441;color:#fff}
 .chip.jump[aria-expanded="true"] .chev{transform:rotate(180deg)}
-.sugg{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+.sbox{background:#fff;border:1px solid var(--line);border-radius:12px}
+.sbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px}
+.sbar-t{font-size:14px;font-weight:500;margin-right:4px}
+.spanel{border-top:1px solid var(--line2);padding:14px;display:flex;flex-direction:column;gap:12px}
+.spanel>.small{margin:0}
 .chip.jump b{font-weight:600;background:#F1F0EC;border-radius:999px;padding:0 7px;font-size:12px}
 dialog{border:0;border-radius:14px;padding:0;width:min(520px,calc(100vw - 32px));box-shadow:0 20px 60px rgba(20,20,19,.25);color:var(--ink)}
 dialog::backdrop{background:rgba(20,20,19,.45)}
 .dlg{padding:24px;display:flex;flex-direction:column;gap:14px}
-.dlg h2{margin:0;font-size:18px;font-weight:600;line-height:1.35}
+.dlg-x{position:sticky;top:0;align-self:flex-end;margin:-14px -14px -34px 0;width:40px;height:40px;border-radius:8px;border:0;background:#fff;color:var(--muted);display:flex;align-items:center;justify-content:center;z-index:2;flex:none}
+.dlg-x:hover{background:#F1F0EC;color:var(--ink)}
+.dlg h2{margin:0;font-size:18px;font-weight:600;line-height:1.35;padding-right:36px}
 .dlg .reqid{margin-bottom:-8px}
 .dlg h2.reqh{font-size:15px;font-weight:500;line-height:1.5}
 .dlg label{font-size:14px;font-weight:500;display:block}
@@ -163,7 +168,6 @@ h1{font-size:20px}
 .toolbar>*{flex:none}
 #filters{flex-wrap:nowrap}
 .toolbar .lbl{display:none}
-.tb-r{margin-left:0;flex-wrap:nowrap}
 .coltabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0}
 .coltab{font-size:12px;line-height:1.25;min-height:52px;padding:4px;border-radius:8px;border:1px solid var(--line);border-top:3px solid var(--c);background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 .coltab b{font-weight:600}
@@ -222,14 +226,19 @@ h1{font-size:20px}
 <span class="lbl">Show</span>
 <span id="filters" class="toolbar"></span>
 <select class="sel" id="wfSel" aria-label="Filter by workflow"></select>
-<span class="tb-r"><button type="button" class="chip jump" id="suggJump" aria-expanded="false" aria-controls="suggPanel">Suggestions <b id="suggCount">0</b><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
-<button type="button" class="chip add" id="suggestBtn">+ Suggest a missing requirement</button></span>
+
 </div>
 
-<section class="sugg" id="suggPanel" aria-labelledby="suggH" hidden>
-<div class="sugg-h"><h2 id="suggH" tabindex="-1">Suggested by reviewers</h2><button type="button" class="linkbtn" id="suggClose">Hide</button></div>
-<p class="small" style="margin-top:-6px">Requirements reviewers think are missing from the board. They aren't added during the review; each one gets a decision afterwards, shown here.</p>
+<section class="sbox" aria-label="Suggestions">
+<div class="sbar">
+<span class="sbar-t">Something missing from the board?</span>
+<button type="button" class="chip add" id="suggestBtn">+ Suggest a missing requirement</button>
+<button type="button" class="chip jump" id="suggJump" aria-expanded="false" aria-controls="suggPanel">View suggestions <b id="suggCount">0</b><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+<div id="suggPanel" class="spanel" hidden>
+<p class="small">Requirements reviewers think are missing from the board. They aren't added during the review; each one gets a decision afterwards, shown here.</p>
 <div id="suggList" class="sugg-list"></div>
+</div>
 </section>
 <div id="coltabs" class="coltabs" role="tablist" aria-label="Columns"></div>
 <div id="board" class="board"><p class="loading">Loading…</p></div>
@@ -241,7 +250,7 @@ h1{font-size:20px}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=17"></script>
-<script src="app.js?v=17"></script>
+<script src="config.js?v=19"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

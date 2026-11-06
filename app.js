@@ -336,10 +336,11 @@
 
   // ---------- dialogs ----------
   var dlg = $('dlg'), form = $('dlgForm'), onSubmit = null;
+  var CLOSE_X = '<button type="button" class="dlg-x" data-close aria-label="Close" formnovalidate><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>';
   function openDialog(html, submit) {
-    form.innerHTML = html; onSubmit = submit;
+    form.innerHTML = CLOSE_X + html; onSubmit = submit;
     if (typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open', '');
-    var first = form.querySelector('textarea, input, select'); if (first) first.focus();
+    var first = form.querySelector('textarea, input, select, .acts .primary'); if (first) first.focus();
   }
   function closeDialog() { if (dlg.open) dlg.close(); onSubmit = null; }
   form.addEventListener('submit', function (e) {
@@ -349,6 +350,11 @@
     if (onSubmit && onSubmit() !== false) closeDialog();
   });
   dlg.addEventListener('cancel', function () { onSubmit = null; });
+  form.addEventListener('click', function (e) { if (e.target.closest('[data-close]')) { e.preventDefault(); closeDialog(); } });
+  // Clicking the dark area outside the pop-up closes it (only if the click started there, so selecting text doesn't).
+  var downOnBackdrop = false;
+  dlg.addEventListener('mousedown', function (e) { downOnBackdrop = e.target === dlg; });
+  dlg.addEventListener('click', function (e) { if (e.target === dlg && downOnBackdrop) closeDialog(); downOnBackdrop = false; });
   function showErr(msg) { var el = form.querySelector('.err'); el.textContent = msg; el.hidden = false; }
   function acts(label) {
     return '<p class="err" role="alert" hidden></p><div class="acts"><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" value="ok">' + esc(label) + '</button></div>';
@@ -514,7 +520,6 @@
     if (!open) $('suggJump').focus();
   }
   $('suggJump').addEventListener('click', function () { toggleSugg($('suggPanel').hidden); });
-  $('suggClose').addEventListener('click', function () { toggleSugg(false); });
   $('refreshBtn').addEventListener('click', function () { refresh(); });
   $('logoutBtn').addEventListener('click', function () {
     if (S.code && !S.demo) api({ action: 'signout', code: S.code }).catch(function () {});
