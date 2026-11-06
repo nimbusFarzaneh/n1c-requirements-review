@@ -470,31 +470,17 @@
 
   function openSuggest(existing) {
     var ex = existing || null;
-    var wfs = {}, acs = {};
-    S.reqs.forEach(function (r) {
-      if (r.workflow) wfs[r.workflow] = 1;
-      String(r.actor || '').split(';').forEach(function (a) { a = a.trim(); if (a) acs[a] = 1; });
-    });
-    var actors = Object.keys(acs).sort(function (a, b) { return a.localeCompare(b); });
-    var exActors = ex ? String(ex.actor || '').split(';').map(function (a) { return a.trim(); }).filter(Boolean) : [];
-    var exOther = exActors.filter(function (a) { return actors.indexOf(a) < 0; });
     openDialog(
       '<h2>' + (ex ? 'Edit your suggestion' : 'Suggest a missing requirement') + '</h2>' +
       '<p class="small">Everyone reviewing can see suggestions. They aren\u2019t added to the board during the review; each one gets a decision afterwards.</p>' +
       '<label>What\u2019s needed? <span class="opt">(required)</span><textarea name="req" maxlength="1000" style="min-height:72px">' + esc(ex ? ex.requirement : '') + '</textarea></label>' +
       '<label>Why is it needed? <span class="opt">(required)</span><textarea name="why" maxlength="2000" style="min-height:72px">' + esc(ex ? ex.why : '') + '</textarea></label>' +
-      '<label>Workflow <span class="opt">(optional)</span><select name="wf"><option value="">Not sure</option>' +
-        Object.keys(wfs).sort().map(function (w) { return '<option' + (ex && ex.workflow === w ? ' selected' : '') + '>' + esc(w) + '</option>'; }).join('') + '</select></label>' +
-      '<fieldset class="actors"><legend>Who needs it? <span class="opt">(optional, pick any)</span></legend><div class="actor-grid">' +
-        actors.map(function (a) { return '<label class="chk"><input type="checkbox" name="actor" value="' + esc(a) + '"' + (exActors.indexOf(a) >= 0 ? ' checked' : '') + '> ' + esc(a) + '</label>'; }).join('') +
-      '</div><label style="margin-top:8px">Someone else <span class="opt">(optional)</span><input name="actorOther" maxlength="120" value="' + esc(exOther.join('; ')) + '"></label></fieldset>' +
       '<label>Where do you think it belongs? <span class="opt">(optional)</span><select name="cat"><option value="">Not sure</option>' +
         CATS.map(function (c) { return '<option' + (ex && ex.category === c ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('') + '</select></label>' +
       acts(ex ? 'Save changes' : 'Submit suggestion'),
       function () {
-        var picked = Array.prototype.filter.call(form.querySelectorAll('input[name="actor"]'), function (x) { return x.checked; }).map(function (x) { return x.value; });
-        var other = form.actorOther.value.trim(); if (other) picked.push(other);
-        var s = { requirement: form.req.value.trim(), workflow: form.wf.value, actor: picked.join('; '), category: form.cat.value, why: form.why.value.trim() };
+        // Workflow and who-needs-it aren't asked any more; keep whatever an older suggestion already had.
+        var s = { requirement: form.req.value.trim(), workflow: ex ? ex.workflow || '' : '', actor: ex ? ex.actor || '' : '', category: form.cat.value, why: form.why.value.trim() };
         if (!s.requirement || !s.why) { showErr('Please describe what\u2019s needed and why.'); return false; }
         if (ex) {
           if (ex.requirement === s.requirement && ex.why === s.why && ex.workflow === s.workflow && ex.actor === s.actor && ex.category === s.category) return;
