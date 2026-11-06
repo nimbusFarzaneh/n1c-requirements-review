@@ -108,6 +108,11 @@ h1{margin:0;font-size:28px;font-weight:600;line-height:1.2}
 .sdl dt{color:var(--muted)}
 .sdl dd{margin:0;color:var(--ink)}
 .chip.jump{display:inline-flex;align-items:center;gap:6px}
+.chip.jump .chev{transition:transform .2s}
+.chip.jump[aria-expanded="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip.jump[aria-expanded="true"] b{background:#444441;color:#fff}
+.chip.jump[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.sugg{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
 .chip.jump b{font-weight:600;background:#F1F0EC;border-radius:999px;padding:0 7px;font-size:12px}
 dialog{border:0;border-radius:14px;padding:0;width:min(520px,calc(100vw - 32px));box-shadow:0 20px 60px rgba(20,20,19,.25);color:var(--ink)}
 dialog::backdrop{background:rgba(20,20,19,.45)}
@@ -214,25 +219,26 @@ h1{font-size:20px}
 <span class="lbl">Show</span>
 <span id="filters" class="toolbar"></span>
 <select class="sel" id="wfSel" aria-label="Filter by workflow"></select>
-<span class="tb-r"><button type="button" class="chip jump" id="suggJump">View suggestions <b id="suggCount">0</b></button>
+<span class="tb-r"><button type="button" class="chip jump" id="suggJump" aria-expanded="false" aria-controls="suggPanel">Suggestions <b id="suggCount">0</b><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
 <button type="button" class="chip add" id="suggestBtn">+ Suggest a missing requirement</button></span>
 </div>
 
-<div id="coltabs" class="coltabs" role="tablist" aria-label="Columns"></div>
-<div id="board" class="board"><p class="loading">Loading…</p></div>
-
-<section class="sugg" aria-labelledby="suggH">
-<div class="sugg-h"><h2 id="suggH" tabindex="-1">Suggested by reviewers</h2><button type="button" class="linkbtn" id="suggTop">Back to top</button></div>
+<section class="sugg" id="suggPanel" aria-labelledby="suggH" hidden>
+<div class="sugg-h"><h2 id="suggH" tabindex="-1">Suggested by reviewers</h2><button type="button" class="linkbtn" id="suggClose">Hide</button></div>
 <p class="small" style="margin-top:-6px">Requirements reviewers think are missing from the board. They aren't added during the review; each one gets a decision afterwards, shown here.</p>
 <div id="suggList" class="sugg-list"></div>
 </section>
+<div id="coltabs" class="coltabs" role="tablist" aria-label="Columns"></div>
+<div id="board" class="board"><p class="loading">Loading…</p></div>
+
+
 </div>
 </div>
 
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=15"></script>
-<script src="app.js?v=15"></script>
+<script src="config.js?v=16"></script>
+<script src="app.js?v=16"></script>
 </body>
 </html>

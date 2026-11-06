@@ -413,6 +413,7 @@
         if (!s.requirement || !s.why) { showErr('Please describe what\u2019s needed and why.'); return false; }
         S.suggestions.push(Object.assign({ reviewer: S.reviewer, triage: '', note: '' }, s));
         renderSuggestions();
+        toggleSugg(true);
         save(Object.assign({ action: 'suggest' }, s));
       });
   }
@@ -452,8 +453,13 @@
     if (t.id === 'wfSel') { S.workflow = t.value; renderBoard(); }
   });
   $('suggestBtn').addEventListener('click', openSuggest);
-  $('suggJump').addEventListener('click', function () { $('suggH').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('suggH').focus({ preventScroll: true }); });
-  $('suggTop').addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  function toggleSugg(open) {
+    $('suggPanel').hidden = !open;
+    $('suggJump').setAttribute('aria-expanded', String(open));
+    if (!open) $('suggJump').focus();
+  }
+  $('suggJump').addEventListener('click', function () { toggleSugg($('suggPanel').hidden); });
+  $('suggClose').addEventListener('click', function () { toggleSugg(false); });
   $('refreshBtn').addEventListener('click', function () { refresh(); });
   $('logoutBtn').addEventListener('click', function () {
     if (S.code && !S.demo) api({ action: 'signout', code: S.code }).catch(function () {});
