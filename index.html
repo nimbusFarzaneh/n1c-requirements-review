@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Requirements review</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -147,6 +148,9 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .login-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:32px;width:min(420px,100%);display:flex;flex-direction:column;gap:14px}
 .login-card h1{font-size:24px}
+.login-logo{display:block;width:112px;height:112px;margin:0 auto 4px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{width:52px;height:52px;flex:none}
 .login-card label{font-size:14px;font-weight:500;display:flex;flex-direction:column;gap:6px}
 .login-card input{font-size:15px;padding:12px;border:1px solid #B9B8B1;border-radius:8px}
 .login-card .err{margin:0;font-size:13px;color:var(--red)}
@@ -186,6 +190,7 @@ h1{font-size:20px}
 
 <main id="login" class="login" hidden>
 <form id="loginForm" class="login-card" novalidate>
+<img class="login-logo" src="logo.png" width="112" height="112" alt="N=1 Collaborative">
 <p class="eyebrow" id="loginEyebrow">Requirements review</p>
 <h1>Sign in to review</h1>
 <p class="small">Enter the access code you were sent. It identifies you, so please don't share it.</p>
@@ -200,7 +205,7 @@ h1{font-size:20px}
 <div class="wrap">
 <header class="top">
 <div class="top-l">
-<p class="eyebrow" id="eyebrow">Requirements review</p>
+<p class="eyebrow brand"><img src="logo.png" width="52" height="52" alt="N=1 Collaborative"><span id="eyebrow">Requirements review</span></p>
 <h1>Do you agree with where each requirement sits?</h1>
 <p class="intro">Approve a card if it's in the right place and it moves to the approved pile. If you disagree, <span class="dt">drag it to another column (or use "Move to")</span><span class="mb">use "Move to"</span> and tell us why. You can comment on any card. Items needing an N1C decision are settled together, so just add your view. Your changes save automatically.</p>
 </div>
@@ -250,7 +255,7 @@ h1{font-size:20px}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<script src="config.js?v=21"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>
