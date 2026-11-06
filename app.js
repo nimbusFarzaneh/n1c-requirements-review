@@ -114,7 +114,7 @@
     var r = byId(id); if (!r) return;
     var prev = copy(S.mine[id]);
     setMine(id, { status: 'approved', to: '', comment: prev && prev.comment || '' });
-    toast('Approved “' + r.requirement + '”', function () { setMine(id, prev); });
+    toast('Approved ' + r.id + '. It\u2019s now in the approved pile.', function () { setMine(id, prev); });
   }
   function unapprove(id) {
     var m = S.mine[id];
