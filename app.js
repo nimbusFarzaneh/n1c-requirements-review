@@ -162,6 +162,15 @@
     }).join('');
   }
 
+  function setFilter(f) {
+    S.filter = f;
+    if (!shownIn(S.mobileCol).length) {
+      var first = COLS.filter(function (c) { return shownIn(c.key).length; })[0];
+      if (first) S.mobileCol = first.key;
+    }
+    renderFilters(); renderBoard();
+  }
+
   function passFilter(r) {
     if (S.workflow && (r.workflow || 'Other') !== S.workflow) return false;
     var st = status(r), m = mine(r);
@@ -172,8 +181,16 @@
     return st !== 'approved';
   }
 
+  function shownIn(colKey) {
+    var live = S.reqs.filter(function (r) { return eff(r) === colKey && reviewable(r); });
+    var pool = (S.filter === 'approved' || S.filter === 'commented') ? live : live.filter(function (r) { return status(r) !== 'approved'; });
+    return pool.filter(passFilter);
+  }
+
   function renderBoard() {
-    var tabs = [];
+    var tabs = [], filtered = S.filter !== 'open';
+    var matches = {};
+    COLS.forEach(function (c) { matches[c.key] = shownIn(c.key).length; });
     var html = COLS.map(function (col) {
       var all = S.reqs.filter(function (r) { return eff(r) === col.key; });
       var decided = all.filter(isDecided);
@@ -181,10 +198,10 @@
       var approved = live.filter(function (r) { return status(r) === 'approved'; });
       var open = live.filter(function (r) { return status(r) !== 'approved'; });
       var left = open.filter(function (r) { return !status(r); }).length;
-      var shown = (S.filter === 'approved' || S.filter === 'commented' ? live : open).filter(passFilter);
+      var shown = shownIn(col.key);
       var isN = col.key === N1C;
 
-      tabs.push('<button type="button" class="coltab" role="tab" data-act="coltab" data-col="' + esc(col.key) + '" style="--c:' + col.color + '" aria-selected="' + (S.mobileCol === col.key) + '"><b>' + esc(col.key === N1C ? 'N1C decision' : col.key) + '</b><span>' + (isN ? open.length + ' open' : left + ' left') + '</span></button>');
+      tabs.push('<button type="button" class="coltab" role="tab" data-act="coltab" data-col="' + esc(col.key) + '" style="--c:' + col.color + '" aria-selected="' + (S.mobileCol === col.key) + '"><b>' + esc(col.key === N1C ? 'N1C decision' : col.key) + '</b><span>' + (filtered ? matches[col.key] + (matches[col.key] === 1 ? ' match' : ' matches') : isN ? open.length + ' open' : left + ' left') + '</span></button>');
       var h = '<section class="colm' + (S.mobileCol === col.key ? ' on' : '') + '" data-col="' + esc(col.key) + '" style="--c:' + col.color + '" aria-label="' + esc(col.key) + '">';
       h += '<div class="colm-h"><h2>' + esc(col.key) + '</h2><span>' +
         (isN ? open.length + ' open · ' + all.length + ' total' : left + ' to review · ' + live.length + ' total') + '</span></div>';
@@ -192,7 +209,11 @@
       if (!isN) h += '<div class="dropzone">Drop here to move to ' + esc(col.key) + '</div>';
 
       if (!shown.length) {
-        h += '<p class="empty">' + (S.filter === 'approved' ? (isN ? 'These are settled by discussion, not approved.' : 'You haven\u2019t approved anything here yet.') : open.length ? 'Nothing here matches this filter.' : (approved.length ? 'All done here.' : 'No items.')) + '</p>';
+        var elsewhere = COLS.filter(function (c) { return c.key !== col.key && matches[c.key]; }).map(function (c) { return c.key + ' (' + matches[c.key] + ')'; });
+        var msg = S.filter === 'approved' && isN ? 'These are settled by discussion, not approved.'
+          : filtered ? 'None in this column.' + (elsewhere.length ? ' See ' + elsewhere.join(', ') + '.' : '')
+          : open.length ? 'Nothing here.' : (approved.length ? 'All done here.' : 'No items.');
+        h += '<p class="empty">' + esc(msg) + '</p>';
       } else if (shown.length > GROUP_AT) {
         var groups = {};
         shown.forEach(function (r) { var w = r.workflow || 'Other'; (groups[w] = groups[w] || []).push(r); });
@@ -212,7 +233,7 @@
         shown.forEach(function (r) { h += card(r, false); });
       }
 
-      if (!isN && approved.length && S.filter !== 'approved') {
+      if (!isN && approved.length && !filtered) {
         var po = !!S.pileOpen[col.key];
         h += '<button type="button" class="pile" data-act="pile" data-col="' + esc(col.key) + '" aria-expanded="' + po + '"><span>' + CHECK + approved.length + ' approved</span><b style="font-weight:500">' + (po ? 'Hide' : 'Show') + '</b></button>';
         if (po) approved.forEach(function (r) {
@@ -221,7 +242,7 @@
             (m && m.comment ? '<p class="why">Your comment: ' + esc(m.comment) + '</p>' : '') + '</div>';
         });
       }
-      if (isN && decided.length) {
+      if (isN && decided.length && !filtered) {
         var dk = 'decided', dpo = !!S.pileOpen[dk];
         h += '<button type="button" class="pile dec" data-act="pile" data-col="' + dk + '" aria-expanded="' + dpo + '"><span>' + CHECK + decided.length + ' decided</span><b style="font-weight:500">' + (dpo ? 'Hide' : 'Show') + '</b></button>';
         if (dpo) decided.forEach(function (r) {
@@ -498,7 +519,7 @@
     else if (act === 'views') { S.viewsOpen[id] = !S.viewsOpen[id]; renderBoard(); }
     else if (act === 'more') { var k = t.getAttribute('data-key'); S.groupShow[k] = (S.groupShow[k] || GROUP_SHOW) + 20; renderBoard(); }
     else if (act === 'pile') { var c = t.getAttribute('data-col'); S.pileOpen[c] = !S.pileOpen[c]; renderBoard(); }
-    else if (act === 'filter') { S.filter = t.getAttribute('data-f'); renderFilters(); renderBoard(); }
+    else if (act === 'filter') setFilter(t.getAttribute('data-f'));
     else if (act === 'retry') retry();
     else if (act === 'scomment') openSuggComment(S.suggestions[+t.getAttribute('data-i')]);
     else if (act === 'sedit') openSuggest(S.suggestions[+t.getAttribute('data-i')]);
@@ -508,7 +529,7 @@
   document.addEventListener('change', function (e) {
     var t = e.target;
     if (t.matches('select[data-act="move"]') && t.value) requestMove(t.getAttribute('data-id'), t.value);
-    if (t.id === 'filterSel') { S.filter = t.value; renderFilters(); renderBoard(); }
+    if (t.id === 'filterSel') setFilter(t.value);
   });
   $('suggestBtn').addEventListener('click', function () { openSuggest(); });
   function toggleSugg(open) {
