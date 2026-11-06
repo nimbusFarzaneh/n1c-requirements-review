@@ -199,6 +199,13 @@ function saveReview(reviewer, b) {
       if (text(V.rows[i][iR]) === reviewer && text(V.rows[i][iI]) === id) { found = i; break; }
     }
     var now = new Date();
+    if (found >= 0) {
+      var cur = V.rows[found];
+      var unchanged = text(cur[V.col('Status')]) === status && text(cur[V.col('Suggested category')]) === to && text(cur[V.col('Comment')]) === comment;
+      if (unchanged) return { ok: true, unchanged: true };   // same as before: nothing to save or log
+    } else if (status === 'cleared') {
+      return { ok: true, unchanged: true };
+    }
     if (status === 'cleared') {
       if (found >= 0) V.sheet.deleteRow(found + 2);
     } else {

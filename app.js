@@ -95,7 +95,12 @@
   }
 
   // ---------- state changes ----------
+  function same(a, b) {
+    if (!a || !b) return !a && !b;
+    return a.status === b.status && (a.to || '') === (b.to || '') && (a.comment || '') === (b.comment || '');
+  }
   function setMine(id, entry) {
+    if (same(S.mine[id] || null, entry || null)) return;   // nothing changed: don't save or log
     if (entry) S.mine[id] = entry; else delete S.mine[id];
     renderAll();
     save({ action: 'review', id: id, status: entry ? entry.status : 'cleared', to: entry && entry.to || '', comment: entry && entry.comment || '' });
