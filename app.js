@@ -490,7 +490,7 @@
   function signIn(code) {
     var btn = $('loginBtn'), err = $('loginErr');
     err.hidden = true; btn.disabled = true; btn.textContent = 'Checking…';
-    return api({ action: 'load', code: code }).then(function (data) {
+    return api({ action: 'load', code: code, signin: true }).then(function (data) {
       S.code = code; store(STORE_KEY, code); apply(data);
       $('login').hidden = true; $('app').hidden = false;
       setSave('ok'); renderAll();

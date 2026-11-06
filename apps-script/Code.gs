@@ -64,7 +64,11 @@ function doPost(e) {
     var who = authenticate(body.code);
     if (!who) return json({ ok: false, error: 'invalid_code' });
     var reviewer = who.name;
-    if (body.action === 'load') return json(loadState(reviewer, who.owner));
+    if (body.action === 'load') {
+      // Record visits (signing in, or reopening the page while still signed in); the Refresh button doesn't count.
+      if (body.signin) table('Log').sheet.appendRow([new Date(), safe(reviewer), '', 'signed in', '', '']);
+      return json(loadState(reviewer, who.owner));
+    }
     if (body.action === 'review') return json(saveReview(reviewer, body));
     if (body.action === 'suggest') return json(saveSuggestion(reviewer, body));
     return json({ ok: false, error: 'unknown_action' });
