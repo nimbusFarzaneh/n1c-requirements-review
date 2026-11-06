@@ -114,7 +114,7 @@
     var r = byId(id); if (!r) return;
     var prev = copy(S.mine[id]);
     setMine(id, { status: 'approved', to: '', comment: prev && prev.comment || '' });
-    toast('Approved ' + r.id + '. It\u2019s now in the approved pile.', function () { setMine(id, prev); });
+    toast('Approved ' + r.id.replace(/-/g, '\u2011') + '. It\u2019s now in the approved pile.', function () { setMine(id, prev); });
   }
   function unapprove(id) {
     var m = S.mine[id];
@@ -156,6 +156,9 @@
     };
     $('filters').innerHTML = FILTERS.map(function (f) {
       return '<button type="button" class="chip" data-act="filter" data-f="' + f.key + '" aria-pressed="' + (S.filter === f.key) + '">' + esc(f.label) + ' (' + counts[f.key] + ')</button>';
+    }).join('');
+    $('filterSel').innerHTML = FILTERS.map(function (f) {
+      return '<option value="' + f.key + '"' + (S.filter === f.key ? ' selected' : '') + '>' + esc(f.label) + ' (' + counts[f.key] + ')</option>';
     }).join('');
   }
 
@@ -505,6 +508,7 @@
   document.addEventListener('change', function (e) {
     var t = e.target;
     if (t.matches('select[data-act="move"]') && t.value) requestMove(t.getAttribute('data-id'), t.value);
+    if (t.id === 'filterSel') { S.filter = t.value; renderFilters(); renderBoard(); }
   });
   $('suggestBtn').addEventListener('click', function () { openSuggest(); });
   function toggleSugg(open) {
