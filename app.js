@@ -309,7 +309,7 @@
   }
 
   function reqHead(r) {
-    return '<p class="small">' + esc([r.id, r.workflow].filter(Boolean).join(' \u00b7 ')) + '</p>' +
+    return '<p class="small reqid">' + esc([r.id, r.workflow].filter(Boolean).join(' \u00b7 ')) + '</p>' +
       '<h2 class="reqh">' + esc(r.requirement) + '</h2>';
   }
 
