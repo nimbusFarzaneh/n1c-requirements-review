@@ -146,14 +146,21 @@ dialog::backdrop{background:rgba(20,20,19,.45)}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:var(--ink);color:#fff;border-radius:10px;padding:8px 8px 8px 16px;font-size:13px;max-width:min(520px,calc(100vw - 32px));box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:10}
 .toast button{font-size:13px;font-weight:500;min-height:36px;padding:0 12px;border-radius:6px;border:1px solid #5F5E58;background:transparent;color:#fff}
 .login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-.login-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:32px;width:min(420px,100%);display:flex;flex-direction:column;gap:14px}
-.login-card h1{font-size:24px}
-.login-logo{display:block;width:112px;height:112px;margin:0 auto 4px}
-.brand{display:flex;align-items:center;gap:10px}
-.brand img{width:52px;height:52px;flex:none}
-.login-card label{font-size:14px;font-weight:500;display:flex;flex-direction:column;gap:6px}
-.login-card input{font-size:15px;padding:12px;border:1px solid #B9B8B1;border-radius:8px}
-.login-card .err{margin:0;font-size:13px;color:var(--red)}
+.login-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:40px 36px 32px;width:min(420px,100%);display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;box-shadow:0 1px 2px rgba(20,20,19,.04),0 12px 32px -12px rgba(20,20,19,.12)}
+.login-logo{display:block;width:104px;height:104px;margin:0 0 20px}
+.login-card .eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.login-card h1{font-size:20px;font-weight:600;margin:0 0 8px}
+.login-card .lead{margin:0 0 28px;font-size:14px;line-height:1.6;color:var(--ink2);max-width:330px}
+.login-field{width:100%;display:flex;flex-direction:column;gap:8px;margin:0 0 16px}
+.login-field span{font-size:13px;font-weight:500;color:var(--ink2)}
+.login-card input{width:100%;font-size:16px;padding:13px 14px;border:1px solid #B9B8B1;border-radius:10px;text-align:center;letter-spacing:.06em}
+.login-card input::placeholder{color:#B4B2A9;letter-spacing:.06em}
+.login-card input:focus{border-color:#16224A;outline:2px solid #16224A;outline-offset:0}
+.login-btn{width:100%;justify-content:center;min-height:48px;border-radius:10px;font-size:15px;font-weight:500;background:#16224A;border:1px solid #16224A;color:#fff}
+.login-btn:hover{background:#0E1734}
+.login-btn:disabled{opacity:.7;cursor:default}
+.login-card .err{margin:0 0 12px;font-size:13px;color:var(--red)}
+.login-foot{margin:20px 0 0;font-size:12px;color:var(--muted);line-height:1.5}
 .loading{padding:48px;text-align:center;color:var(--muted)}
 .coltabs{display:none}
 .intro .mb{display:none}
@@ -190,14 +197,14 @@ h1{font-size:20px}
 
 <main id="login" class="login" hidden>
 <form id="loginForm" class="login-card" novalidate>
-<img class="login-logo" src="logo.png" width="112" height="112" alt="N=1 Collaborative">
+<img class="login-logo" src="logo.png" width="104" height="104" alt="N=1 Collaborative">
 <p class="eyebrow" id="loginEyebrow">Requirements review</p>
 <h1>Sign in to review</h1>
-<p class="small">Enter the access code you were sent. It identifies you, so please don't share it.</p>
-<label>Access code<input id="codeInput" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+<p class="lead">Enter the access code you were sent.<br>It's personal to you, so please don't share it.</p>
+<label class="login-field"><span>Access code</span><input id="codeInput" placeholder="n1c-XXXX-XXXX" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
 <p class="err" id="loginErr" role="alert" hidden></p>
-<button class="btn primary" type="submit" id="loginBtn">Continue</button>
-<p class="small" id="demoNote" hidden>Demo mode: no Google Sheet is connected yet. Enter any code to try the board with sample data. Nothing is saved.</p>
+<button class="btn login-btn" type="submit" id="loginBtn">Continue</button>
+<p class="login-foot" id="demoNote" hidden>Demo mode: no Google Sheet is connected yet. Enter any code to try the board with sample data. Nothing is saved.</p>
 </form>
 </main>
 
@@ -255,7 +262,7 @@ h1{font-size:20px}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=21"></script>
-<script src="app.js?v=21"></script>
+<script src="config.js?v=23"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>
