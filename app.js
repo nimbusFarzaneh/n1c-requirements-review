@@ -694,7 +694,10 @@
     }).catch(function (e) {
       store(STORE_KEY, null);
       $('login').hidden = false; $('app').hidden = true;
-      err.textContent = e.code === 'invalid_code' ? 'That code didn’t work. Check it and try again.' : 'Couldn’t connect. Check your connection and try again.';
+      // Show the script's own error when there is one; it's the quickest way to diagnose setup problems.
+      err.textContent = e.code === 'invalid_code' ? 'That code didn\u2019t work. Check it and try again.'
+        : e.code ? 'The review service reported a problem: ' + e.code
+        : 'Couldn\u2019t reach the review service (' + (e.message || 'no response') + '). Check your connection and try again.';
       err.hidden = false;
     }).then(function () { btn.disabled = false; btn.textContent = 'Continue'; });
   }
