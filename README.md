@@ -71,6 +71,7 @@ Edit [`config.js`](config.js) in this repository (on GitHub: open the file and c
 scriptUrl: 'https://script.google.com/macros/s/…/exec',
 projectName: 'N1C',
 deadline: 'Friday 20 November',
+showSearch: false,   // true shows a search box
 ```
 
 Commit the change. GitHub Pages republishes within a minute or two.

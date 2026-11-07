@@ -596,7 +596,8 @@
   });
   $('suggestBtn').addEventListener('click', function () { openSuggest(); });
   var searchTimer = null;
-  $('searchBox').addEventListener('input', function () {
+  if (!CFG.showSearch) $('searchBox').remove();   // search is switched off in config.js
+  else $('searchBox').addEventListener('input', function () {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(function () { S.q = $('searchBox').value.trim().toLowerCase(); setFilter(S.filter); }, 150);
   });

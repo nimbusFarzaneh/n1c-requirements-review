@@ -8,5 +8,8 @@ window.REVIEW_CONFIG = {
   projectName: 'N1C',
 
   // Shown under the reviewer's name, e.g. 'Friday 20 November'. Leave empty to hide.
-  deadline: 'the end of Thursday 12 November'
+  deadline: 'the end of Thursday 12 November',
+
+  // Set to true to show the search box above the board.
+  showSearch: false
 };
