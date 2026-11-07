@@ -21,7 +21,7 @@ Swimlanes for workflows that are clearly MVP may start while the review runs; th
 
 ## 2. The review in one paragraph
 
-All **197 requirements** (109 MVP, 69 Later, 12 Out of Scope, 7 Needs N1C Decision) are shown as cards on a web board. Each of **three reviewers** signs in with a personal access code and, for every card, **agrees** with its column, **moves** it (with a required reason), or marks it **Unclear?** (with a required question). On the 7 *Needs N1C Decision* cards they instead pick the column they'd choose; those are settled in a discussion afterwards. Reviewers can comment on any card and suggest missing requirements. Everything is saved to a private Google Sheet owned by Nima. **Deadline: end of Thursday 12 November 2026.**
+All **197 requirements** (109 MVP, 69 Later, 12 Out of Scope, 7 Needs N1C Decision) are shown as cards on a web board. Each of **three reviewers** signs in with a personal access code and, for every card, **agrees** with its column, or **moves** it (with a required reason). On the 7 *Needs N1C Decision* cards they instead pick the column they'd choose; those are settled in a discussion afterwards. Reviewers can comment on any card and suggest missing requirements. Everything is saved to a private Google Sheet owned by Nima. **Deadline: end of Thursday 12 November 2026.**
 
 ## 3. Where everything lives
 
@@ -94,7 +94,7 @@ Run **Review board → Set up tabs** (or the `setup` function) once. Columns mar
 |---|---|---|---|
 | `agreed` (older rows: `approved`) | Requirement is right and in the right column | Yes | MVP / Later / Out of Scope |
 | `moved` + Suggested category | Belongs elsewhere; reason required. Moving to *Needs N1C Decision* = **requesting** an N1C decision (doesn't make it an N1C item) | Yes | MVP / Later / Out of Scope |
-| `clarify` | Can't judge as written; question required | No | MVP / Later / Out of Scope |
+| `clarify` | No longer offered (was "Unclear?"); treated as a comment | No | MVP / Later / Out of Scope |
 | `commented` | Comment only | No | MVP / Later / Out of Scope |
 | `view` + Suggested category | Reviewer's preferred column for an N1C item (note optional) | Only if a column is chosen | Needs N1C Decision only |
 | `cleared` | Undo: removes the Reviews row (logged) | n/a | any |
@@ -106,7 +106,7 @@ Run **Review board → Set up tabs** (or the `setup` function) once. Columns mar
 
 - Sign-in page with logo; header with logo badge, "Signed in as …", Sign out (reload the page to see others' latest changes); progress card ("x of 197", deadline, save status).
 - Four columns with sticky headers; long columns grouped by workflow ("x of y left", "Show more").
-- Card actions: **Agree**, **Unclear?**, **Comment**, **Move to…** (or drag on desktop). Agreed cards fold into a green "agreed" pile; moved cards fold into a blue "moved here by you" pile in the target column. Short confirmation with **Undo**.
+- Card actions: **Agree**, **Comment**, **Move to…** (or drag on desktop). Agreed cards fold into a green "agreed" pile; moved cards fold into a blue "moved here by you" pile in the target column. Short confirmation with **Undo**.
 - Filters: Everything open, Not yet reviewed, Moved by me, With my comments or questions, Agreed by me. Search box (ID or wording; also finds decided items). On phones: filters become a dropdown and columns become tabs.
 - Suggestions strip ("Something missing from the board?") with a collapsible list; authors can edit/withdraw until decided; anyone can comment.
 - Pop-ups close via ✕, Esc, or clicking outside.
@@ -116,8 +116,8 @@ Run **Review board → Set up tabs** (or the `setup` function) once. Columns mar
 ## 8. Decisions made along the way
 
 - GitHub Pages + Google Sheet chosen over a hosted artifact; individual access codes; no "approve all" button; owner records decisions in the sheet.
-- "Approve" renamed **Agree** and "Unclear?" added after an external audit, so progress reflects real positions.
-- Removed by request: workflow filter dropdown; workflow/actor fields in the suggestion form; time zone on the deadline. Simplicity is preferred over completeness in the UI.
+- "Approve" renamed **Agree** after an external audit, so progress reflects real positions. An "Unclear?" button was added, then removed for simplicity (a Comment covers it; older `clarify` rows are treated as comments).
+- Removed by request: workflow filter dropdown; workflow/actor fields in the suggestion form; time zone on the deadline; search box (hidden via `showSearch: false` in config.js); Refresh button (reload the page instead); "Unclear?" button. Save status only appears while saving or on failure. Simplicity is preferred over completeness in the UI.
 - Deliberately **not** done (judged unnecessary for a one-week, three-person review): session expiry for remembered codes, staging environment, automated test suite, reviewer IDs separate from names, giving N1C-view controls to cards a reviewer moved into N1C.
 - Four external audits were run; all valid findings are fixed as of commit `5e06213` (page `v=41`).
 
@@ -125,7 +125,7 @@ Run **Review board → Set up tabs** (or the `setup` function) once. Columns mar
 
 **Before sending** (check if done): paste latest `Code.gs` and redeploy a new version; test with the Tester code (Agree should save a `agreed` row); delete test rows from Reviews, Log, Suggestions, Suggestion comments; confirm reviewer codes.
 
-**Invitations**: one email per reviewer (sent individually, each with only their own code), signed "Kind regards, Nima Farzaneh", explaining Agree / Move / Unclear? / N1C views / suggestions, ~1 hour, can be done in several sittings, deadline end of Thursday 12 November.
+**Invitations**: one email per reviewer (sent individually, each with only their own code), signed "Kind regards, Nima Farzaneh", explaining Agree / Move / N1C views / suggestions, ~1 hour, can be done in several sittings, deadline end of Thursday 12 November.
 
 **During the review**: watch the Log for sign-ins; start swimlanes for clearly-MVP workflows.
 

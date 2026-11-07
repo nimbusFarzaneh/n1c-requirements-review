@@ -14,7 +14,7 @@
     { key: 'open', label: 'Everything open' },
     { key: 'todo', label: 'Not yet reviewed' },
     { key: 'moved', label: 'Moved by me' },
-    { key: 'commented', label: 'With my comments or questions' },
+    { key: 'commented', label: 'With my comments' },
     { key: 'agreed', label: 'Agreed by me' }
   ];
   var GROUP_AT = 12;   // group a column by workflow once it has more open cards than this
@@ -111,6 +111,7 @@
   }
   function setSave(state) {
     var el = $('saveState');
+    el.hidden = state === 'ok';   // only shown while saving or when something failed
     el.className = 'pill ' + state;
     if (state === 'busy') el.textContent = 'Saving…';
     else if (state === 'ok') el.textContent = S.demo ? 'Demo: not saved' : 'All changes saved';
@@ -334,7 +335,6 @@
         h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">Edit question</button>';
         h += '<button type="button" class="btn" data-act="unclarify" data-id="' + esc(r.id) + '">Withdraw question</button>';
       } else {
-        h += '<button type="button" class="btn" data-act="clarify" data-id="' + esc(r.id) + '">Unclear?</button>';
         h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">' + (m && m.comment ? 'Edit comment' : 'Comment') + '</button>';
       }
     }
@@ -656,7 +656,7 @@
     });
     S.mine = {};
     Object.keys(data.mine || {}).forEach(function (id) {
-      var m = data.mine[id], st = m.status === 'approved' ? 'agreed' : m.status;   // older rows say "approved"
+      var m = data.mine[id], st = m.status === 'approved' ? 'agreed' : m.status === 'clarify' ? 'commented' : m.status;   // older names
       S.mine[id] = { status: st, to: st === 'moved' || st === 'view' ? (normCat(m.to) || '') : '', comment: m.comment || '' };
     });
     S.views = data.views || {};

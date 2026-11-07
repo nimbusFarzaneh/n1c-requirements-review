@@ -12,7 +12,6 @@ A review board where reviewers approve, move or comment on N1C requirements prop
 2. For each card, take a position:
    - **Agree**: the requirement is right and belongs in its column. It moves to the agreed pile.
    - **Move** it to another column (drag it, or use **Move to…**), with a reason. Moving it to **Needs N1C Decision** means "this should be decided by N1C".
-   - **Unclear?**: they can't judge it as written. They say what's unclear; the card stays unreviewed.
    - **Comment** on it at any time. A comment alone doesn't count as reviewed.
 3. On **Needs N1C Decision** cards, pick the column they'd choose (MVP, Later or Out of Scope) and optionally add a note. Only a chosen column counts as reviewed. These are the only cards where reviewers see each other's input, to prepare for the discussion.
 4. Use **Suggest a missing requirement** for anything that isn't on the board.
