@@ -26,7 +26,7 @@
     code: null, reviewer: '', isOwner: false, reviewerCount: 3,
     reqs: [], mine: {}, views: {}, suggestions: [],
     filter: 'open', workflow: '', q: '',
-    pileOpen: {}, groupShow: {}, viewsOpen: {}, mobileCol: 'MVP', seq: {}, changes: 0
+    pileOpen: {}, groupShow: {}, viewsOpen: {}, mobileCol: '', seq: {}, changes: 0
   };
 
   // ---------- helpers ----------
@@ -185,7 +185,7 @@
 
   function setFilter(f) {
     S.filter = f;
-    if (!shownIn(S.mobileCol).length) {
+    if (S.mobileCol && !shownIn(S.mobileCol).length) {   // only switch if a column is already open
       var first = COLS.filter(function (c) { return shownIn(c.key).length; })[0];
       if (first) S.mobileCol = first.key;
     }
@@ -302,6 +302,7 @@
     }).join('');
     $('board').innerHTML = html;
     $('coltabs').innerHTML = tabs.join('');
+    $('pickCol').classList.toggle('show', !S.mobileCol);
   }
 
   function card(r, grouped) {
@@ -587,7 +588,7 @@
     else if (act === 'scomment') openSuggComment(S.suggestions[+t.getAttribute('data-i')]);
     else if (act === 'sedit') openSuggest(S.suggestions[+t.getAttribute('data-i')]);
     else if (act === 'swithdraw') openWithdraw(S.suggestions[+t.getAttribute('data-i')], +t.getAttribute('data-i'));
-    else if (act === 'coltab') { S.mobileCol = t.getAttribute('data-col'); renderBoard(); var y = $('board').getBoundingClientRect().top + window.scrollY - $('coltabs').offsetHeight - 8; if (window.scrollY > y) window.scrollTo(0, y); }
+    else if (act === 'coltab') { var ck = t.getAttribute('data-col'); S.mobileCol = S.mobileCol === ck ? '' : ck; renderBoard(); }   // tap again to close
   });
   document.addEventListener('change', function (e) {
     var t = e.target;
