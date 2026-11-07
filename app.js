@@ -302,7 +302,6 @@
     }).join('');
     $('board').innerHTML = html;
     $('coltabs').innerHTML = tabs.join('');
-    $('pickCol').classList.toggle('show', !S.mobileCol);
   }
 
   function card(r, grouped) {
