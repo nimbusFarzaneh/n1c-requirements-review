@@ -607,7 +607,6 @@
     if (!open) $('suggJump').focus();
   }
   $('suggJump').addEventListener('click', function () { toggleSugg($('suggPanel').hidden); });
-  $('refreshBtn').addEventListener('click', function () { refresh(); });
   $('logoutBtn').addEventListener('click', function () {
     if (S.code && !S.demo) api({ action: 'signout', code: S.code }).catch(function () {});
     store(STORE_KEY, null); S.code = null; $('app').hidden = true; $('login').hidden = false; $('codeInput').value = '';
@@ -668,12 +667,11 @@
     $('dataWarn').hidden = !bad.length;
     if (bad.length) $('dataWarn').textContent = bad.length + (bad.length === 1 ? ' requirement isn\u2019t' : ' requirements aren\u2019t') +
       ' shown because its Category isn\u2019t MVP, Later, Out of Scope or Needs N1C Decision: ' +
-      bad.slice(0, 10).map(function (r) { return r.id + ' (\u201c' + r.rawCategory + '\u201d)'; }).join(', ') + (bad.length > 10 ? ', \u2026' : '') + '. Fix it in the Requirements tab, then click Refresh.';
+      bad.slice(0, 10).map(function (r) { return r.id + ' (\u201c' + r.rawCategory + '\u201d)'; }).join(', ') + (bad.length > 10 ? ', \u2026' : '') + '. Fix it in the Requirements tab, then reload the page.';
   }
 
   function refresh() {
     if (failed.length) { toast('Some changes haven\u2019t saved yet. Click Retry first.'); return Promise.resolve(); }
-    $('refreshBtn').textContent = 'Refreshing…';
     // Wait for any saves still in progress, so the reload includes them.
     var startedAt;
     return queue.then(function () { startedAt = S.changes; return api({ action: 'load', code: S.code }); }).then(function (data) {
@@ -681,8 +679,7 @@
       if (S.changes !== startedAt || failed.length || pending) return;
       apply(data); renderAll();
     })
-      .catch(function () { toast('Couldn’t refresh. Check your connection and try again.'); })
-      .then(function () { $('refreshBtn').textContent = 'Refresh'; });
+      .catch(function () { toast('Couldn’t refresh. Check your connection and try again.'); });
   }
 
   function signIn(code) {

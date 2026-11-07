@@ -189,7 +189,10 @@ h1{font-size:20px}
 .intro .mb{display:inline}
 .top{gap:10px}
 .progcard{flex:1 1 100%}
-.who{flex:1 1 100%;order:-1;margin:0}
+.topbar{flex-wrap:nowrap}
+.who,#demoPill{display:none!important}
+.account{flex-wrap:nowrap;flex:none}
+.brand{white-space:nowrap;font-size:12px;min-width:0}
 .pills{justify-content:flex-start}
 #filters{display:none}
 .toolbar .lbl{font-size:14px;margin-right:0}
@@ -233,7 +236,6 @@ h1{font-size:20px}
 <div class="account">
 <span class="pill demo" id="demoPill" hidden>Demo mode</span>
 <span class="who" id="who"></span>
-<button type="button" class="btn acct-btn" id="refreshBtn">Refresh</button>
 <button type="button" class="btn acct-btn" id="logoutBtn">Sign out</button>
 </div>
 </div>
@@ -280,7 +282,7 @@ h1{font-size:20px}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=47"></script>
-<script src="app.js?v=47"></script>
+<script src="config.js?v=50"></script>
+<script src="app.js?v=50"></script>
 </body>
 </html>
