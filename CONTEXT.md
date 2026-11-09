@@ -105,7 +105,7 @@ Run **Review board → Set up tabs** (or the `setup` function) once. Columns mar
 ## 7. Board features (current UI)
 
 - Sign-in page with logo; header with logo badge, "Signed in as …", Sign out (reload the page to see others' latest changes); progress card ("x of 197", deadline, save status).
-- Four columns with sticky headers; long columns grouped by workflow ("x of y left", "Show more").
+- Four columns with sticky headers. Columns with more than 12 items (MVP, Later) are grouped by workflow; groups start **closed** and open on click ("x of y left", or "Done"). Groups open automatically while a filter is on. On phones, column tabs all start closed too.
 - Card actions: **Agree**, **Comment**, **Move to…** (or drag on desktop). Agreed cards fold into a green "agreed" pile; moved cards fold into a blue "moved here by you" pile in the target column. Short confirmation with **Undo**.
 - Filters: Everything open, Not yet reviewed, Moved by me, With my comments or questions, Agreed by me. Search box (ID or wording; also finds decided items). On phones: filters become a dropdown and columns become tabs.
 - Suggestions strip ("Something missing from the board?") with a collapsible list; authors can edit/withdraw until decided; anyone can comment.

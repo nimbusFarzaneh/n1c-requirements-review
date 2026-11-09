@@ -60,9 +60,14 @@ h1{margin:0;font-size:28px;font-weight:600;line-height:1.2}
 .colm-h h2{margin:0;font-size:15px;font-weight:600}
 .colm-h span{font-size:12px;color:var(--muted);text-align:right}
 .blurb{margin:-6px 4px 0;font-size:12px;color:var(--muted)}
-.grp-h{display:flex;justify-content:space-between;align-items:center;padding:6px 4px 0}
-.grp-h h3{margin:0;font-size:13px;font-weight:600;color:#3A3934}
-.grp-h span{font-size:12px;color:var(--muted)}
+.grp{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;text-align:left}
+.grp:hover{border-color:#B9B8B1}
+.grp .chev{flex:none;color:var(--muted);transition:transform .15s}
+.grp.open .chev{transform:rotate(90deg)}
+.grp-name{flex:1;min-width:0;font-size:13px;font-weight:600;color:#3A3934}
+.grp-count{font-size:12px;color:var(--muted);white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.grp.done .grp-count{color:var(--green)}
+.grp-body{display:flex;flex-direction:column;gap:10px;padding:0 0 4px 10px;border-left:2px solid var(--line)}
 .card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .card[draggable="true"]{cursor:grab}
 .card.dragging{opacity:.45}
@@ -282,7 +287,7 @@ h1{font-size:20px}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=51"></script>
-<script src="app.js?v=51"></script>
+<script src="config.js?v=52"></script>
+<script src="app.js?v=52"></script>
 </body>
 </html>

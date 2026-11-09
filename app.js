@@ -18,7 +18,6 @@
     { key: 'agreed', label: 'Agreed by me' }
   ];
   var GROUP_AT = 12;   // group a column by workflow once it has more open cards than this
-  var GROUP_SHOW = 6;  // cards shown per group before "Show more"
   var STORE_KEY = 'n1c-review-code';
 
   var S = {
@@ -26,7 +25,7 @@
     code: null, reviewer: '', isOwner: false, reviewerCount: 3,
     reqs: [], mine: {}, views: {}, suggestions: [],
     filter: 'open', workflow: '', q: '',
-    pileOpen: {}, groupShow: {}, viewsOpen: {}, mobileCol: '', seq: {}, changes: 0
+    pileOpen: {}, groupShow: {}, viewsOpen: {}, mobileCol: '', seq: {}, groupOpen: {}, changes: 0
   };
 
   // ---------- helpers ----------
@@ -247,20 +246,22 @@
           : filtered ? 'None in this column.' + (elsewhere.length ? ' See ' + elsewhere.join(', ') + '.' : '')
           : open.length ? 'Nothing here.' : (approved.length ? 'All done here.' : 'No items.');
         h += '<p class="empty">' + esc(msg) + '</p>';
-      } else if (shown.length > GROUP_AT) {
+      } else if (live.length > GROUP_AT) {
+        // Group by workflow. Without a filter every workflow in the column is listed (finished ones show "Done").
         var groups = {};
+        if (!filtered) live.forEach(function (r) { groups[r.workflow || 'Other'] = []; });
         shown.forEach(function (r) { var w = r.workflow || 'Other'; (groups[w] = groups[w] || []).push(r); });
         Object.keys(groups).sort().forEach(function (w) {
           var inCol = live.filter(function (r) { return (r.workflow || 'Other') === w; });
           var gLeft = inCol.filter(function (r) { return !isReviewed(r); }).length;
           var key = col.key + '|' + w;
-          var limit = S.groupShow[key] || GROUP_SHOW;
           var items = groups[w];
-          h += '<div class="grp-h"><h3>' + esc(w) + '</h3><span>' + gLeft + ' of ' + inCol.length + ' left</span></div>';
-          items.slice(0, limit).forEach(function (r) { h += card(r, true); });
-          if (items.length > limit) {
-            h += '<button type="button" class="more" data-act="more" data-key="' + esc(key) + '">Show ' + (items.length - limit) + ' more in ' + esc(w) + '</button>';
-          }
+          // Groups start closed; while a filter is on they open so the matches are visible.
+          var isOpen = key in S.groupOpen ? S.groupOpen[key] : filtered;
+          h += '<button type="button" class="grp' + (isOpen ? ' open' : '') + (gLeft ? '' : ' done') + '" data-act="group" data-key="' + esc(key) + '" aria-expanded="' + isOpen + '">' +
+            '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>' +
+            '<span class="grp-name">' + esc(w) + '</span><span class="grp-count">' + (gLeft ? gLeft + ' of ' + inCol.length + ' left' : CHECK + 'Done') + '</span></button>';
+          if (isOpen) h += '<div class="grp-body">' + (items.length ? items.map(function (r) { return card(r, true); }).join('') : '<p class="empty">All done in this group. Agreed cards are in the pile below.</p>') + '</div>';
         });
       } else {
         shown.forEach(function (r) { h += card(r, false); });
@@ -580,7 +581,7 @@
     else if (act === 'note') openNote(id);
     else if (act === 'view') setView(id, t.getAttribute('data-cat'));
     else if (act === 'views') { S.viewsOpen[id] = !S.viewsOpen[id]; renderBoard(); }
-    else if (act === 'more') { var k = t.getAttribute('data-key'); S.groupShow[k] = (S.groupShow[k] || GROUP_SHOW) + 20; renderBoard(); }
+    else if (act === 'group') { var gk = t.getAttribute('data-key'); var cur = t.getAttribute('aria-expanded') === 'true'; S.groupOpen[gk] = !cur; renderBoard(); }
     else if (act === 'pile') { var c = t.getAttribute('data-col'); S.pileOpen[c] = !S.pileOpen[c]; renderBoard(); }
     else if (act === 'filter') setFilter(t.getAttribute('data-f'));
     else if (act === 'retry') retry();
