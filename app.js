@@ -15,7 +15,8 @@
     { key: 'todo', label: 'Not yet reviewed' },
     { key: 'moved', label: 'Moved by me' },
     { key: 'commented', label: 'With my comments' },
-    { key: 'agreed', label: 'Agreed by me' }
+    { key: 'agreed', label: 'Agreed by me' },
+    { key: 'notreq', label: 'Not a requirement (by me)' }
   ];
   var GROUP_AT = 12;   // group a column by workflow once it has more open cards than this
   var STORE_KEY = 'n1c-review-code';
@@ -46,6 +47,7 @@
   function store(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
   function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   var ARROW = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>';
+  var CROSS = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg>';
   var CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>';
 
   function byId(id) { for (var i = 0; i < S.reqs.length; i++) if (S.reqs[i].id === id) return S.reqs[i]; return null; }
@@ -59,6 +61,7 @@
   // Comments and clarification requests don't.
   function isReviewed(r) {
     var m = mine(r); if (!m) return false;
+    if (m.status === 'notreq') return true;
     if (r.category === N1C) return m.status === 'view' && !!m.to;
     return m.status === 'agreed' || m.status === 'moved';
   }
@@ -151,6 +154,13 @@
     openMove(id, to);
   }
   function unclarify(id) { setMine(id, null); }
+  // "Not a requirement": the item isn't a real requirement (e.g. a note, decision or background), whatever its column.
+  function notReq(id) {
+    var r = byId(id); if (!r) return;
+    var prev = copy(S.mine[id]);
+    setMine(id, { status: 'notreq', to: '', comment: prev && prev.comment || '' });
+    toast('Marked ' + r.id.replace(/-/g, '\u2011') + ' as not a requirement.', function () { setMine(id, prev); });
+  }
   function setView(id, cat) {
     var m = S.mine[id];
     setMine(id, { status: 'view', to: cat, comment: m && m.comment || '' });
@@ -169,11 +179,12 @@
   function renderFilters() {
     var pool = S.reqs.filter(reviewable);
     var counts = {
-      open: pool.filter(function (r) { return status(r) !== 'agreed' && status(r) !== 'moved'; }).length,
+      open: pool.filter(function (r) { var st = status(r); return st !== 'agreed' && st !== 'moved' && st !== 'notreq'; }).length,
       todo: pool.filter(function (r) { return !isReviewed(r); }).length,
       moved: pool.filter(function (r) { return status(r) === 'moved'; }).length,
       commented: pool.filter(function (r) { return mine(r) && mine(r).comment; }).length,
-      agreed: pool.filter(function (r) { return status(r) === 'agreed'; }).length
+      agreed: pool.filter(function (r) { return status(r) === 'agreed'; }).length,
+      notreq: pool.filter(function (r) { return status(r) === 'notreq'; }).length
     };
     $('filters').innerHTML = FILTERS.map(function (f) {
       return '<button type="button" class="chip" data-act="filter" data-f="' + f.key + '" aria-pressed="' + (S.filter === f.key) + '">' + esc(f.label) + ' (' + counts[f.key] + ')</button>';
@@ -205,12 +216,13 @@
     if (S.filter === 'moved') return st === 'moved';
     if (S.filter === 'commented') return !!(m && m.comment);
     if (S.filter === 'agreed') return st === 'agreed';
-    return st !== 'agreed' && st !== 'moved';   // agreed and moved cards fold into piles
+    if (S.filter === 'notreq') return st === 'notreq';
+    return st !== 'agreed' && st !== 'moved' && st !== 'notreq';   // these fold into piles
   }
 
   function shownIn(colKey) {
     var live = S.reqs.filter(function (r) { return eff(r) === colKey && reviewable(r); });
-    var pool = (S.filter === 'agreed' || S.filter === 'commented') ? live : live.filter(function (r) { return status(r) !== 'agreed'; });
+    var pool = (S.filter === 'agreed' || S.filter === 'commented' || S.filter === 'notreq') ? live : live.filter(function (r) { return status(r) !== 'agreed'; });
     return pool.filter(passFilter);
   }
 
@@ -226,7 +238,7 @@
       var decided = col.key === N1C ? S.reqs.filter(isDecided) : [];
       var live = all.filter(reviewable);
       var approved = live.filter(function (r) { return status(r) === 'agreed'; });
-      var open = live.filter(function (r) { return status(r) !== 'agreed'; });
+      var open = live.filter(function (r) { return status(r) !== 'agreed' && status(r) !== 'notreq'; });
       var left = open.filter(function (r) { return !isReviewed(r); }).length;
       var shown = shownIn(col.key);
       var isN = col.key === N1C;
@@ -277,6 +289,16 @@
             '<div class="row" style="justify-content:flex-start;gap:14px"><button type="button" class="linkbtn" data-act="undomove" data-id="' + esc(r.id) + '">Undo move</button><button type="button" class="linkbtn" data-act="comment" data-id="' + esc(r.id) + '">Edit reason</button></div></div>';
         });
       }
+      var notReqs = live.filter(function (r) { return status(r) === 'notreq'; });
+      if (notReqs.length && !filtered) {
+        var nk = 'notreq|' + col.key, npo = !!S.pileOpen[nk];
+        h += '<button type="button" class="pile nr" data-act="pile" data-col="' + esc(nk) + '" aria-expanded="' + npo + '"><span>' + CROSS + notReqs.length + ' not ' + (notReqs.length === 1 ? 'a requirement' : 'requirements') + '</span><b style="font-weight:500">' + (npo ? 'Hide' : 'Show') + '</b></button>';
+        if (npo) notReqs.forEach(function (r) {
+          var m = mine(r);
+          h += '<div class="mini"><div class="row"><p>' + esc(r.requirement) + '</p><button type="button" class="linkbtn" data-act="unapprove" data-id="' + esc(r.id) + '">Undo</button></div>' +
+            '<p class="why">' + esc(r.id) + (m && m.comment ? ' \u00b7 Your comment: ' + esc(m.comment) : '') + '</p></div>';
+        });
+      }
       if (!isN && approved.length && !filtered) {
         var po = !!S.pileOpen[col.key];
         h += '<button type="button" class="pile" data-act="pile" data-col="' + esc(col.key) + '" aria-expanded="' + po + '"><span>' + CHECK + approved.length + ' agreed</span><b style="font-weight:500">' + (po ? 'Hide' : 'Show') + '</b></button>';
@@ -313,6 +335,7 @@
     else if (st === 'commented') h += '<span class="badge b-comm">You commented (not yet reviewed)</span>';
     else if (st === 'clarify') h += '<span class="badge b-view">You asked for clarification</span>';
     else if (st === 'agreed') h += '<span class="badge b-ok">You agreed with this placement</span>';
+    else if (st === 'notreq') h += '<span class="badge b-nr">You marked this as not a requirement</span>';
     h += '<p class="title">' + esc(r.requirement) + '</p>';
     h += '<div class="tags">' + (!grouped && r.workflow ? '<span class="tag">' + esc(r.workflow) + '</span>' : '') +
       (r.actor ? '<span class="tag">' + esc(r.actor) + '</span>' : '') + '<span class="rid">' + esc(r.id) + '</span></div>';
@@ -327,11 +350,12 @@
     if (st === 'moved') {
       h += '<button type="button" class="btn" data-act="undomove" data-id="' + esc(r.id) + '">Undo move</button>';
       h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">Edit reason</button>';
-    } else if (st === 'agreed') {
+    } else if (st === 'agreed' || st === 'notreq') {
       h += '<button type="button" class="btn" data-act="unapprove" data-id="' + esc(r.id) + '">Undo</button>';
       h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">' + (m && m.comment ? 'Edit comment' : 'Comment') + '</button>';
     } else {
       h += '<button type="button" class="btn approve" data-act="approve" data-id="' + esc(r.id) + '" title="The requirement is right and belongs in ' + esc(r.category) + '">' + CHECK + 'Agree</button>';
+      h += '<button type="button" class="btn" data-act="notreq" data-id="' + esc(r.id) + '" title="This isn\u2019t a real requirement (e.g. a note, a decision already made, or background)">Not a requirement</button>';
       if (st === 'clarify') {
         h += '<button type="button" class="btn" data-act="comment" data-id="' + esc(r.id) + '">Edit question</button>';
         h += '<button type="button" class="btn" data-act="unclarify" data-id="' + esc(r.id) + '">Withdraw question</button>';
@@ -354,6 +378,7 @@
     ['MVP', 'Later', 'Out of Scope'].forEach(function (c) {
       h += '<button type="button" class="vchip" data-act="view" data-id="' + esc(r.id) + '" data-cat="' + esc(c) + '" aria-pressed="' + (myView === c) + '">' + esc(c) + '</button>';
     });
+    h += '<button type="button" class="vchip" data-act="notreq" data-id="' + esc(r.id) + '" aria-pressed="' + (m && m.status === 'notreq') + '">Not a requirement</button>';
     h += '</div>';
     if (m && m.comment) h += '<p class="mycomm">Your note: ' + esc(m.comment) + '</p>';
     h += '<button type="button" class="btn" data-act="note" data-id="' + esc(r.id) + '" style="align-self:flex-start">' + (m && m.comment ? 'Edit note' : 'Add a note') + '</button>';
@@ -364,7 +389,7 @@
         return '<li><b style="font-weight:500">' + esc(v.reviewer) + '</b>: ' + esc(v.view || 'no view chosen yet') + (v.comment ? ' — ' + esc(v.comment) : '') + '</li>';
       }).join('') + '</ul>';
     }
-    if (!myView) h += '<p class="why">Choose MVP, Later or Out of Scope to count this as reviewed. A note alone doesn\u2019t count.</p>';
+    if (!myView && !(m && m.status === 'notreq')) h += '<p class="why">Choose MVP, Later or Out of Scope to count this as reviewed. A note alone doesn\u2019t count.</p>';
     h += '<p class="pending">Decision: pending discussion</p></div>';
     return h;
   }
@@ -469,8 +494,8 @@
         } else if (clar) {
           if (!c) { showErr('Say what needs clarifying, or use \u201cWithdraw question\u201d.'); return false; }
           setMine(id, { status: 'clarify', to: '', comment: c });
-        } else if (m && m.status === 'agreed') {
-          setMine(id, { status: 'agreed', to: '', comment: c });
+        } else if (m && (m.status === 'agreed' || m.status === 'notreq')) {
+          setMine(id, { status: m.status, to: '', comment: c });
         } else if (c) {
           setMine(id, { status: 'commented', to: '', comment: c });
         } else if (m) {
@@ -500,6 +525,7 @@
       function () {
         var c = form.c.value.trim();
         if (!c && !(m && m.to)) { if (m) setMine(id, null); return; }
+        if (m && m.status === 'notreq') { setMine(id, { status: 'notreq', to: '', comment: c }); return; }
         setMine(id, { status: 'view', to: m && m.to || '', comment: c });
       });
   }
@@ -577,6 +603,7 @@
     else if (act === 'undomove') undoMove(id);
     else if (act === 'comment') openComment(id);
     else if (act === 'clarify') openClarify(id);
+    else if (act === 'notreq') notReq(id);
     else if (act === 'unclarify') unclarify(id);
     else if (act === 'note') openNote(id);
     else if (act === 'view') setView(id, t.getAttribute('data-cat'));

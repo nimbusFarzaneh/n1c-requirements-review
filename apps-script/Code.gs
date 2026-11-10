@@ -23,7 +23,8 @@ var TABS = {
   'Suggestion comments': ['Timestamp', 'Suggestion', 'Reviewer', 'Comment', 'ID']
 };
 // agreed = agrees with the placement; clarify = can't judge it as written; approved = older name for agreed.
-var STATUSES = ['agreed', 'approved', 'moved', 'commented', 'clarify', 'view', 'cleared'];
+// notreq = the item isn't a real requirement (allowed on any column).
+var STATUSES = ['agreed', 'approved', 'moved', 'commented', 'clarify', 'view', 'notreq', 'cleared'];
 // Columns added after the first version: created automatically at the end of the tab if missing.
 var ADDED_COLUMNS = { Requirements: ['Decision date', 'Decision rationale'], Reviewers: ['Role'], Suggestions: ['ID'], 'Suggestion comments': ['ID'] };
 var CATEGORIES = ['MVP', 'Later', 'Out of Scope', 'Needs N1C Decision'];
@@ -368,8 +369,9 @@ function refreshSummary() {
       if (st === 'agreed') positions.push(cat);
       else if (st === 'moved' && e.to) positions.push(e.to);
       else if (st === 'view' && e.to) positions.push(e.to);
+      else if (st === 'notreq') positions.push('Not a requirement');
       if (st === 'clarify') questions++;
-      var label = { agreed: 'Agrees', moved: 'Moved to ' + e.to, commented: 'Comment only', clarify: 'Needs clarification', view: e.to ? 'View: ' + e.to : 'Note only' }[st] || st;
+      var label = { agreed: 'Agrees', moved: 'Moved to ' + e.to, commented: 'Comment only', clarify: 'Needs clarification', view: e.to ? 'View: ' + e.to : 'Note only', notreq: 'Not a requirement' }[st] || st;
       cells.push(label, e.comment);
     });
     var distinct = positions.filter(function (p, i) { return positions.indexOf(p) === i; });
@@ -377,6 +379,7 @@ function refreshSummary() {
     if (decision) outcome = 'Decided: ' + decision;
     else if (positions.length < reviewers.length) outcome = 'Incomplete';
     else if (distinct.length > 1) outcome = 'Reviewers disagree';
+    else if (distinct[0] === 'Not a requirement') outcome = 'All: not a requirement';
     else if (isN) outcome = 'All favour ' + distinct[0];
     else if (distinct[0] === cat) outcome = 'All agree';
     else outcome = 'All suggest ' + distinct[0];

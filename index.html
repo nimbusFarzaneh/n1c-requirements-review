@@ -105,6 +105,8 @@ h1{margin:0;font-size:28px;font-weight:600;line-height:1.2}
 .pile{font-size:13px;min-height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 12px;border-radius:10px;border:1px solid var(--green-l);background:var(--green-t);color:var(--green);width:100%}
 .pile span{display:flex;align-items:center;gap:6px}
 .pile.mv{border-color:#C3D2F3;background:var(--blue-t);color:var(--blue-d)}
+.pile.nr{border-color:var(--line);background:#F1F0EC;color:#3A3934}
+.badge.b-nr{color:#3A3934;background:#E4E3DE}
 .pile.dec{border-color:#EBCBA9;background:var(--orange-t);color:var(--orange-d)}
 .mini{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}
 .mini p{margin:0;font-size:13px}
@@ -247,7 +249,7 @@ h1{font-size:20px}
 <header class="top">
 <div class="top-l">
 <h1>Do you agree with where each requirement sits?</h1>
-<p class="intro"><b>Agree</b> if a requirement is in the right column. If not, <span class="dt">drag it (or use "Move to")</span><span class="mb">use "Move to"</span> and say why. Comments don't count as reviewed. Changes save automatically.</p>
+<p class="intro"><b>Agree</b> if a requirement is in the right column. If not, <span class="dt">drag it (or use "Move to")</span><span class="mb">use "Move to"</span> and say why. If it isn't really a requirement, choose <b>Not a requirement</b>. Comments don't count as reviewed. Changes save automatically.</p>
 </div>
 <div class="progcard">
 <div class="prog-row"><span>Your progress</span><b id="progText">0 of 0</b></div>
@@ -287,7 +289,7 @@ h1{font-size:20px}
 <dialog id="dlg"><form id="dlgForm" class="dlg" method="dialog" novalidate></form></dialog>
 <div id="toast" class="toast" role="status" hidden><span id="toastMsg"></span><button type="button" id="toastUndo">Undo</button></div>
 
-<script src="config.js?v=52"></script>
-<script src="app.js?v=52"></script>
+<script src="config.js?v=53"></script>
+<script src="app.js?v=53"></script>
 </body>
 </html>
